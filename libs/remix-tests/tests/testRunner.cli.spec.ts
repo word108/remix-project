@@ -9,10 +9,10 @@ describe('testRunner: remix-tests CLI', function(){
   const executablePath = resolve(__dirname + '/../../../dist/libs/remix-tests/bin/remix-tests')
 
   const result = spawnSync('ls', { cwd: resolve(__dirname + '/../../../dist/libs/remix-tests') })
-  if(result) {
+  if (result) {
     const dirContent = result.stdout.toString()
     // Install dependencies if 'node_modules' is not already present
-    if(!dirContent.includes('node_modules')) {
+    if (!dirContent.includes('node_modules')) {
       execSync('yarn add @remix-project/remix-lib ../../libs/remix-lib', { cwd: resolve(__dirname + '/../../../dist/libs/remix-tests') })
       execSync('yarn add @remix-project/remix-url-resolver ../../libs/remix-url-resolver', { cwd: resolve(__dirname + '/../../../dist/libs/remix-tests') })
       execSync('yarn add @remix-project/remix-solidity ../../libs/remix-solidity', { cwd: resolve(__dirname + '/../../../dist/libs/remix-tests') })
@@ -21,16 +21,16 @@ describe('testRunner: remix-tests CLI', function(){
     }
   }
 
-
   describe('test various CLI options', function() {
     it('remix-tests version', () => {
       const res = spawnSync(executablePath, ['-V'])
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      expect(res.stdout.toString().trim()).to.equal(require('../package.json').version)
+      expect(res.stdout.toString().trim()).to.equal(require('../package.json').version, `actual value: ${res.stdout.toString()}`)
     })
 
     it('remix-tests help', () => {
       const res = spawnSync(executablePath, ['-h'])
+      console.log(res.stdout.toString())
       const expectedHelp = `Usage: remix-tests [options] [command] <file_path>
 
 Arguments:
@@ -62,6 +62,7 @@ Commands:
       const res = spawnSync(executablePath, [resolve(__dirname + '/examples_0/assert_ok_test.sol')])
       //console.log(res.stdout.toString())
       // match initial lines
+      console.log(res.stdout.toString())
       expect(res.stdout.toString().trim()).to.match(/:: Running tests using remix-tests ::/)
       expect(res.stdout.toString().trim()).to.match(/creation of library remix_tests.sol:Assert pending.../)
       // match test result
@@ -76,8 +77,6 @@ Commands:
       expect(res.stdout.toString().trim()).to.match(/Message: okFailTest fails/)
 
     })
-
-
 
     it('remix-tests running a test file with custom compiler version', () => {
       const res = spawnSync(executablePath, ['--compiler', '0.7.4', resolve(__dirname + '/examples_0/assert_ok_test.sol')])

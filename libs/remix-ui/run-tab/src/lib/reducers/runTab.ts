@@ -1,6 +1,6 @@
 import { ContractData } from '@remix-project/core-plugin'
 import { ContractList, DeployOptions, RunTabState } from '../types'
-import { ADD_INSTANCE, UPDATE_INSTANCES_BALANCE, ADD_PROVIDER, CLEAR_INSTANCES, CLEAR_RECORDER_COUNT, DISPLAY_NOTIFICATION, DISPLAY_POPUP_MESSAGE, FETCH_ACCOUNTS_LIST_FAILED, FETCH_ACCOUNTS_LIST_REQUEST, FETCH_ACCOUNTS_LIST_SUCCESS, FETCH_CONTRACT_LIST_FAILED, FETCH_CONTRACT_LIST_REQUEST, FETCH_CONTRACT_LIST_SUCCESS, FETCH_PROVIDER_LIST_FAILED, FETCH_PROVIDER_LIST_REQUEST, FETCH_PROVIDER_LIST_SUCCESS, HIDE_NOTIFICATION, HIDE_POPUP_MESSAGE, REMOVE_INSTANCE, REMOVE_PROVIDER, RESET_STATE, SET_BASE_FEE_PER_GAS, SET_CONFIRM_SETTINGS, SET_CURRENT_CONTRACT, SET_CURRENT_FILE, SET_DECODED_RESPONSE, SET_DEPLOY_OPTIONS, SET_EXECUTION_ENVIRONMENT, SET_EXTERNAL_WEB3_ENDPOINT, SET_GAS_LIMIT, SET_GAS_PRICE, SET_GAS_PRICE_STATUS, SET_IPFS_CHECKED_STATE, SET_LOAD_TYPE, SET_MATCH_PASSPHRASE, SET_MAX_FEE, SET_MAX_PRIORITY_FEE, SET_NETWORK_NAME, SET_PASSPHRASE, SET_PATH_TO_SCENARIO, SET_PERSONAL_MODE, SET_RECORDER_COUNT, SET_SELECTED_ACCOUNT, SET_SEND_UNIT, SET_SEND_VALUE, ADD_DEPLOY_OPTION, REMOVE_DEPLOY_OPTION, SET_REMIXD_ACTIVATED, FETCH_PROXY_DEPLOYMENTS, NEW_PROXY_DEPLOYMENT, RESET_PROXY_DEPLOYMENTS, EXTRACT_COMPILER_VERSION } from '../constants'
+import { ADD_INSTANCE, PIN_INSTANCE, UNPIN_INSTANCE, UPDATE_INSTANCES_BALANCE, ADD_PROVIDER, CLEAR_INSTANCES, CLEAR_RECORDER_COUNT, DISPLAY_NOTIFICATION, DISPLAY_POPUP_MESSAGE, FETCH_ACCOUNTS_LIST_FAILED, FETCH_ACCOUNTS_LIST_REQUEST, FETCH_ACCOUNTS_LIST_SUCCESS, FETCH_CONTRACT_LIST_FAILED, FETCH_CONTRACT_LIST_REQUEST, FETCH_CONTRACT_LIST_SUCCESS, FETCH_PROVIDER_LIST_FAILED, FETCH_PROVIDER_LIST_REQUEST, FETCH_PROVIDER_LIST_SUCCESS, HIDE_NOTIFICATION, HIDE_POPUP_MESSAGE, REMOVE_INSTANCE, REMOVE_PROVIDER, RESET_STATE, SET_BASE_FEE_PER_GAS, SET_CONFIRM_SETTINGS, SET_CHAIN_ID, SET_CURRENT_CONTRACT, SET_CURRENT_FILE, SET_DECODED_RESPONSE, SET_DEPLOY_OPTIONS, SET_EXECUTION_ENVIRONMENT, SET_EXTERNAL_WEB3_ENDPOINT, SET_GAS_LIMIT, SET_GAS_PRICE, SET_GAS_PRICE_STATUS, SET_IPFS_CHECKED_STATE, SET_LOAD_TYPE, SET_MATCH_PASSPHRASE, SET_MAX_FEE, SET_MAX_PRIORITY_FEE, SET_NETWORK_NAME, SET_PASSPHRASE, SET_PATH_TO_SCENARIO, SET_PERSONAL_MODE, SET_RECORDER_COUNT, SET_SELECTED_ACCOUNT, SET_SEND_UNIT, SET_SEND_VALUE, ADD_DEPLOY_OPTION, REMOVE_DEPLOY_OPTION, SET_REMIXD_ACTIVATED, FETCH_PROXY_DEPLOYMENTS, NEW_PROXY_DEPLOYMENT, RESET_PROXY_DEPLOYMENTS, EXTRACT_COMPILER_VERSION } from '../constants'
 
 declare const window: any
 interface Action {
@@ -18,10 +18,11 @@ export const runTabInitialState: RunTabState = {
   },
   sendValue: '0',
   sendUnit: 'wei',
-  gasLimit: 3000000,
-  selectExEnv: 'vm-merge',
+  gasLimit: 0,
+  selectExEnv: 'vm-cancun',
   personalMode: false,
   networkName: 'VM',
+  chainId:'-',
   providers: {
     providerList: [],
     isRequesting: false,
@@ -71,14 +72,6 @@ export const runTabInitialState: RunTabState = {
   proxy: {
     deployments: []
   }
-}
-
-type AddProvider = {
-  name: string,
-  displayName: string,
-  provider: any,
-  title?: string,
-  dataId?: string
 }
 
 export const runTabReducer = (state: RunTabState = runTabInitialState, action: Action) => {
@@ -169,7 +162,7 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
     return {
       ...state,
       selectExEnv: payload,
-      networkName: state.selectExEnv === 'vm-merge' ? 'VM' : state.networkName,
+      networkName: state.selectExEnv === 'vm-cancun' ? 'VM' : state.networkName,
       accounts: {
         ...state.accounts,
         selectedAccount: '',
@@ -192,7 +185,16 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
 
     return {
       ...state,
-      networkName: payload
+      networkName: payload,
+    }
+  }
+
+  case SET_CHAIN_ID: {
+    const payload = action.payload
+
+    return {
+      ...state,
+      chainId: payload
     }
   }
 
@@ -209,13 +211,11 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
   }
 
   case FETCH_PROVIDER_LIST_SUCCESS: {
-    const payload: { id?: string, dataId?: string, title?: string, value: string, fork?: string, content: string }[] = action.payload
-
     return {
       ...state,
       providers: {
         ...state.providers,
-        providerList: payload,
+        providerList: action.payload,
         isSuccessful: true,
         isRequesting: false,
         error: null
@@ -238,15 +238,23 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
   }
 
   case ADD_PROVIDER: {
-    const payload: AddProvider = action.payload
-    const id = action.payload.name
-    state.providers.providerList.push({
-      content: payload.displayName,
-      dataId: payload.dataId,
-      id,
-      title: payload.title,
-      value: id
-    })
+    const payload = action.payload
+    const length = state.providers.providerList.length
+    if (state.providers.providerList.length === 0) {
+      state.providers.providerList.push(payload)
+    } else {
+      let index = 0
+      for (const provider of state.providers.providerList) {
+        if (provider.position >= payload.position) {
+          state.providers.providerList.splice(index, 0, payload)
+          break;
+        }
+        index++
+      }
+      if (length === state.providers.providerList.length) {
+        state.providers.providerList.push(payload)
+      }
+    }
     return {
       ...state,
       providers: {
@@ -257,8 +265,8 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
   }
 
   case REMOVE_PROVIDER: {
-    const id: string = action.payload
-    const providers = state.providers.providerList.filter((el) => el.id !== id)
+    const name: string = action.payload
+    const providers = state.providers.providerList.filter((el) => el.name !== name)
     return {
       ...state,
       providers: {
@@ -476,7 +484,7 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
   }
 
   case ADD_INSTANCE: {
-    const payload: { contractData: ContractData, address: string, name: string, abi?: any, decodedResponse?: Record<number, any> } = action.payload
+    const payload: { contractData?: ContractData, address: string, name: string, abi?: any, isPinned?: boolean, pinnedAt?: number } = action.payload
 
     return {
       ...state,
@@ -500,13 +508,36 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
   }
 
   case REMOVE_INSTANCE: {
-    const payload: number = action.payload
-
+    const payload: { index: number } = action.payload
     return {
       ...state,
       instances: {
         ...state.instances,
-        instanceList: state.instances.instanceList.filter((_, index) => index !== payload)
+        instanceList: state.instances.instanceList.filter((_, index) => index !== payload.index)
+      }
+    }
+  }
+
+  case PIN_INSTANCE: {
+    const payload: { index: number, pinnedAt: number, filePath: string } = action.payload
+    state.instances.instanceList[payload.index].isPinned = true
+    state.instances.instanceList[payload.index].pinnedAt = payload.pinnedAt
+    state.instances.instanceList[payload.index].filePath = payload.filePath
+    return {
+      ...state,
+      instances: {
+        ...state.instances,
+      }
+    }
+  }
+
+  case UNPIN_INSTANCE: {
+    const payload: { index: number } = action.payload
+    state.instances.instanceList[payload.index].isPinned = false
+    return {
+      ...state,
+      instances: {
+        ...state.instances,
       }
     }
   }
@@ -523,7 +554,6 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
 
   case SET_DECODED_RESPONSE: {
     const payload: { instanceIndex: number, funcIndex: number, response: any } = action.payload
-
     return {
       ...state,
       instances: {
@@ -584,7 +614,7 @@ export const runTabReducer = (state: RunTabState = runTabInitialState, action: A
       ...state,
       contracts: {
         ...state.contracts,
-        deployOptions: {...state.contracts.deployOptions, ...payload }
+        deployOptions: { ...state.contracts.deployOptions, ...payload }
       }
     }
   }

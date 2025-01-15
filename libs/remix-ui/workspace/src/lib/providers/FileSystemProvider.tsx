@@ -1,10 +1,11 @@
 // eslint-disable-next-line no-use-before-define
-import React, {useReducer, useState, useEffect, SyntheticEvent} from 'react'
+import React, { useReducer, useState, useEffect, SyntheticEvent } from 'react'
 import {ModalDialog} from '@remix-ui/modal-dialog' // eslint-disable-line
 import {Toaster} from '@remix-ui/toaster' // eslint-disable-line
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {FileSystemContext} from '../contexts'
-import {browserReducer, browserInitialState} from '../reducers/workspace'
+import { FileSystemContext } from '../contexts'
+import { browserReducer, browserInitialState } from '../reducers/workspace'
+import { branch } from '@remix-ui/git'
 import {
   initWorkspace,
   fetchDirectory,
@@ -13,6 +14,7 @@ import {
   deleteAllWorkspaces,
   clearPopUp,
   publishToGist,
+  publishFilesToGist,
   createNewFile,
   setFocusElement,
   createNewFolder,
@@ -23,6 +25,7 @@ import {
   copyShareURL,
   copyFolder,
   runScript,
+  signTypedData,
   emitContextMenuEvent,
   handleClickFile,
   handleExpandPath,
@@ -43,22 +46,18 @@ import {
   switchBranch,
   createNewBranch,
   checkoutRemoteBranch,
-  createSolidityGithubAction,
-  createTsSolGithubAction,
-  createSlitherGithubAction,
-  createHelperScripts,
-  openElectronFolder, 
-  getElectronRecentFolders, 
+  openElectronFolder,
+  getElectronRecentFolders,
   removeRecentElectronFolder,
   updateGitSubmodules
 } from '../actions'
-import {Modal, WorkspaceProps, WorkspaceTemplate} from '../types'
+import { Modal, WorkspaceProps, WorkspaceTemplate } from '../types'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {Workspace} from '../remix-ui-workspace'
-import {customAction} from '@remixproject/plugin-api'
+import { Workspace } from '../remix-ui-workspace'
+import { customAction } from '@remixproject/plugin-api'
 
 export const FileSystemProvider = (props: WorkspaceProps) => {
-  const {plugin} = props
+  const { plugin } = props
   const [fs, fsDispatch] = useReducer(browserReducer, browserInitialState)
   const [focusModal, setFocusModal] = useState<Modal>({
     hide: true,
@@ -98,7 +97,7 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
       await fetchWorkspaceDirectory(path)
     } catch (err) {
       console.warn(err)
-    }    
+    }
   }
 
   const dispatchSwitchToWorkspace = async (name: string) => {
@@ -117,8 +116,12 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     await deleteAllWorkspaces()
   }
 
-  const dispatchPublishToGist = async (path?: string, type?: string) => {
-    await publishToGist(path, type)
+  const dispatchPublishToGist = async (path?: string) => {
+    await publishToGist(path)
+  }
+
+  const dispatchPublishFilesToGist = (selectedFiles: { key: string, type: 'file' | 'folder', content: string }[]) => {
+    publishFilesToGist(selectedFiles)
   }
 
   const dispatchUploadFile = async (target?: SyntheticEvent, targetFolder?: string) => {
@@ -133,7 +136,7 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     await createNewFile(path, rootDir)
   }
 
-  const dispatchSetFocusElement = async (elements: {key: string; type: 'file' | 'folder' | 'gist'}[]) => {
+  const dispatchSetFocusElement = async (elements: {key: string; type: 'file' | 'folder' }[]) => {
     await setFocusElement(elements)
   }
 
@@ -169,11 +172,15 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     await runScript(path)
   }
 
+  const dispatchSignTypedData = async (path: string) => {
+    await signTypedData(path)
+  }
+
   const dispatchEmitContextMenuEvent = async (cmd: customAction) => {
     await emitContextMenuEvent(cmd)
   }
 
-  const dispatchHandleClickFile = async (path: string, type: 'file' | 'folder' | 'gist') => {
+  const dispatchHandleClickFile = async (path: string, type: 'file' | 'folder' ) => {
     await handleClickFile(path, type)
   }
 
@@ -201,15 +208,27 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     await moveFile(src, dest)
   }
 
+  const dispatchMoveFiles = async (src: string[], dest: string) => {
+    for (const path of src) {
+      await moveFile(path, dest)
+    }
+  }
+
   const dispatchMoveFolder = async (src: string, dest: string) => {
     await moveFolder(src, dest)
+  }
+
+  const dispatchMoveFolders = async (src: string[], dest: string) => {
+    for (const path of src) {
+      await moveFolder(path, dest)
+    }
   }
 
   const dispatchShowAllBranches = async () => {
     await showAllBranches()
   }
 
-  const dispatchSwitchToBranch = async (branch: string) => {
+  const dispatchSwitchToBranch = async (branch: branch) => {
     await switchBranch(branch)
   }
 
@@ -217,24 +236,8 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     await createNewBranch(branch)
   }
 
-  const dispatchCheckoutRemoteBranch = async (branch: string, remote: string) => {
-    await checkoutRemoteBranch(branch, remote)
-  }
-
-  const dispatchCreateSolidityGithubAction = async () => {
-    await createSolidityGithubAction()
-  }
-
-  const dispatchCreateTsSolGithubAction = async () => {
-    await createTsSolGithubAction()
-  }
-
-  const dispatchCreateSlitherGithubAction = async () => {
-    await createSlitherGithubAction()
-  }
-
-  const dispatchCreateHelperScripts = async (script: string) => {
-    await createHelperScripts(script)
+  const dispatchCheckoutRemoteBranch = async (branch: branch) => {
+    await checkoutRemoteBranch(branch)
   }
 
   const dispatchOpenElectronFolder = async (path: string) => {
@@ -248,7 +251,6 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
   const dispatchRemoveRecentFolder = async (path: string) => {
     await removeRecentElectronFolder(path)
   }
-
 
   const dispatchUpdateGitSubmodules = async () => {
     await updateGitSubmodules()
@@ -309,13 +311,13 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
 
   const handleHideModal = () => {
     setFocusModal((modal) => {
-      return {...modal, hide: true, message: null}
+      return { ...modal, hide: true, message: null }
     })
   }
 
   const modal = (title: string, message: string | JSX.Element, okLabel: string, okFn: () => void, cancelLabel?: string, cancelFn?: () => void) => {
     setModals((modals) => {
-      modals.push({message, title, okLabel, okFn, cancelLabel, cancelFn})
+      modals.push({ message, title, okLabel, okFn, cancelLabel, cancelFn })
       return [...modals]
     })
   }
@@ -348,6 +350,7 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     dispatchDeleteWorkspace,
     dispatchDeleteAllWorkspaces,
     dispatchPublishToGist,
+    dispatchPublishFilesToGist,
     dispatchUploadFile,
     dispatchUploadFolder,
     dispatchCreateNewFile,
@@ -360,6 +363,7 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     dispatchCopyShareURL,
     dispatchCopyFolder,
     dispatchRunScript,
+    dispatchSignTypedData,
     dispatchEmitContextMenuEvent,
     dispatchHandleClickFile,
     dispatchHandleExpandPath,
@@ -368,15 +372,13 @@ export const FileSystemProvider = (props: WorkspaceProps) => {
     dispatchHandleRestoreBackup,
     dispatchCloneRepository,
     dispatchMoveFile,
+    dispatchMoveFiles,
     dispatchMoveFolder,
+    dispatchMoveFolders,
     dispatchShowAllBranches,
     dispatchSwitchToBranch,
     dispatchCreateNewBranch,
     dispatchCheckoutRemoteBranch,
-    dispatchCreateSolidityGithubAction,
-    dispatchCreateTsSolGithubAction,
-    dispatchCreateSlitherGithubAction,
-    dispatchCreateHelperScripts,
     dispatchOpenElectronFolder,
     dispatchGetElectronRecentFolders,
     dispatchRemoveRecentFolder,

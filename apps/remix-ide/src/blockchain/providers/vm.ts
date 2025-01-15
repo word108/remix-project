@@ -1,6 +1,6 @@
-import Web3, { FMT_BYTES, FMT_NUMBER, LegacySendAsyncProvider } from 'web3'
+import { Web3, FMT_BYTES, FMT_NUMBER, LegacySendAsyncProvider, LegacyRequestProvider } from 'web3'
 import { fromWei, toBigInt } from 'web3-utils'
-import { privateToAddress, hashPersonalMessage, isHexString } from '@ethereumjs/util'
+import { privateToAddress, hashPersonalMessage, isHexString, bytesToHex } from '@ethereumjs/util'
 import { extend, JSONRPCRequestPayload, JSONRPCResponseCallback } from '@remix-project/remix-simulator'
 import { ExecutionContext } from '../execution-context'
 
@@ -10,11 +10,10 @@ export class VMProvider {
   worker: Worker
   provider: {
     sendAsync: (query: JSONRPCRequestPayload, callback: JSONRPCResponseCallback) => void
+    request: (query: JSONRPCRequestPayload) => Promise<any>
   }
   newAccountCallback: {[stamp: number]: (error: Error, address: string) => void}
-
   constructor (executionContext: ExecutionContext) {
-
     this.executionContext = executionContext
     this.worker = null
     this.provider = null
@@ -29,7 +28,7 @@ export class VMProvider {
       })
   }
 
-  async resetEnvironment () {
+  async resetEnvironment (stringifiedState?: string) {
     if (this.worker) this.worker.terminate()
     this.worker = new Worker(new URL('./worker-vm', import.meta.url))
     const provider = this.executionContext.getProviderObject()
@@ -39,7 +38,13 @@ export class VMProvider {
 
     return new Promise((resolve, reject) => {
       this.worker.addEventListener('message', (msg) => {
-        if (msg.data.cmd === 'sendAsyncResult' && stamps[msg.data.stamp]) {
+        if (msg.data.cmd === 'requestResult' && stamps[msg.data.stamp]) {
+          if (msg.data.error) {
+            stamps[msg.data.stamp].reject(msg.data.error)
+          } else {
+            stamps[msg.data.stamp].resolve(msg.data.result)
+          }
+        } else if (msg.data.cmd === 'sendAsyncResult' && stamps[msg.data.stamp]) {
           if (stamps[msg.data.stamp].callback) {
             stamps[msg.data.stamp].callback(msg.data.error, msg.data.result)
             return
@@ -48,7 +53,7 @@ export class VMProvider {
             stamps[msg.data.stamp].reject(msg.data.error)
           } else {
             stamps[msg.data.stamp].resolve(msg.data.result)
-          }          
+          }
         } else if (msg.data.cmd === 'initiateResult') {
           if (!msg.data.error) {
             this.provider = {
@@ -57,11 +62,19 @@ export class VMProvider {
                   const stamp = Date.now() + incr
                   incr++
                   stamps[stamp] = { callback, resolve, reject }
-                  this.worker.postMessage({ cmd: 'sendAsync', query, stamp })              
+                  this.worker.postMessage({ cmd: 'sendAsync', query, stamp })
+                })
+              },
+              request: (query) => {
+                return new Promise((resolve, reject) => {
+                  const stamp = Date.now() + incr
+                  incr++
+                  stamps[stamp] = { resolve, reject }
+                  this.worker.postMessage({ cmd: 'request', query, stamp })
                 })
               }
             }
-            this.web3 = new Web3(this.provider as LegacySendAsyncProvider)
+            this.web3 = new Web3(this.provider as (LegacySendAsyncProvider | LegacyRequestProvider))
             this.web3.setConfig({ defaultTransactionType: '0x0' })
             extend(this.web3)
             this.executionContext.setWeb3(this.executionContext.getProvider(), this.web3)
@@ -76,7 +89,31 @@ export class VMProvider {
           }
         }
       })
-      this.worker.postMessage({ cmd: 'init', fork: this.executionContext.getCurrentFork(), nodeUrl: provider?.options['nodeUrl'], blockNumber: provider?.options['blockNumber']})
+      if (stringifiedState) {
+        try {
+          const blockchainState = JSON.parse(stringifiedState)
+          const blockNumber = parseInt(blockchainState.latestBlockNumber, 16)
+          const stateDb = blockchainState.db
+
+          this.worker.postMessage({
+            cmd: 'init',
+            fork: this.executionContext.getCurrentFork(),
+            nodeUrl: provider?.options['nodeUrl'],
+            blockNumber,
+            stateDb,
+            blocks: blockchainState.blocks
+          })
+        } catch (e) {
+          console.error(e)
+        }
+      } else {
+        this.worker.postMessage({
+          cmd: 'init',
+          fork: this.executionContext.getCurrentFork(),
+          nodeUrl: provider?.options['nodeUrl'],
+          blockNumber: provider?.options['blockNumber']
+        })
+      }
     })
   }
 
@@ -86,7 +123,7 @@ export class VMProvider {
     const { privateKey, balance } = newAccount
     this.worker.postMessage({ cmd: 'addAccount', privateKey: privateKey, balance })
     const privKey = Buffer.from(privateKey, 'hex')
-    return '0x' + privateToAddress(privKey).toString('hex')
+    return bytesToHex(privateToAddress(privKey))
   }
 
   newAccount (_passwordPromptCb, cb) {
@@ -97,7 +134,8 @@ export class VMProvider {
 
   async getBalanceInEther (address) {
     const balance = await this.web3.eth.getBalance(address, undefined, { number: FMT_NUMBER.HEX, bytes: FMT_BYTES.HEX })
-    return fromWei(toBigInt(balance).toString(10), 'ether')
+    const balInString = toBigInt(balance).toString(10)
+    return balInString === '0' ? balInString : fromWei(balInString, 'ether')
   }
 
   getGasPrice (cb) {
@@ -108,11 +146,7 @@ export class VMProvider {
     const messageHash = hashPersonalMessage(Buffer.from(message))
     message = isHexString(message) ? message : Web3.utils.utf8ToHex(message)
     this.web3.eth.sign(message, account)
-      .then(signedData => cb(null, '0x' + messageHash.toString('hex'), signedData))
+      .then(signedData => cb(null, bytesToHex(messageHash), signedData))
       .catch(error => cb(error))
-  }
-
-  getProvider () {
-    return this.executionContext.getProvider()
   }
 }

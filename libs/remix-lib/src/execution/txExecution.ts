@@ -1,6 +1,7 @@
 'use strict'
 import { ethers } from 'ethers'
 import { getFunctionFragment } from './txHelper'
+import { Transaction } from './txRunner'
 
 /**
   * deploy the given contract
@@ -16,11 +17,11 @@ import { getFunctionFragment } from './txHelper'
   *     [personal mode enabled, need password to continue] promptCb (okCb, cancelCb)
   * @param {Function} finalCallback    - last callback.
   */
-export function createContract (from, data, value, gasLimit, txRunner, callbacks, finalCallback) {
+export function createContract ({ from, data, value, gasLimit, signed }: Transaction, txRunner, callbacks, finalCallback) {
   if (!callbacks.confirmationCb || !callbacks.gasEstimationForceSend || !callbacks.promptCb) {
     return finalCallback('all the callbacks must have been defined')
   }
-  const tx = { from: from, to: null, data: data, useCall: false, value: value, gasLimit: gasLimit }
+  const tx = { from: from, to: null, data: data, useCall: false, value: value, gasLimit: gasLimit, signed }
   txRunner.rawRun(tx, callbacks.confirmationCb, callbacks.gasEstimationForceSend, callbacks.promptCb, (error, txResult) => {
     // see universaldapp.js line 660 => 700 to check possible values of txResult (error case)
     finalCallback(error, txResult)
@@ -42,9 +43,9 @@ export function createContract (from, data, value, gasLimit, txRunner, callbacks
   *     [personal mode enabled, need password to continue] promptCb (okCb, cancelCb)
   * @param {Function} finalCallback    - last callback.
   */
-export function callFunction (from, to, data, value, gasLimit, funAbi, txRunner, callbacks, finalCallback) {
+export function callFunction ({ from, to, data, value, gasLimit, signed }: Transaction, funAbi , txRunner, callbacks, finalCallback) {
   const useCall = funAbi.stateMutability === 'view' || funAbi.stateMutability === 'pure' || funAbi.constant
-  const tx = { from, to, data, useCall, value, gasLimit }
+  const tx = { from, to, data, useCall, value, gasLimit, signed }
   txRunner.rawRun(tx, callbacks.confirmationCb, callbacks.gasEstimationForceSend, callbacks.promptCb, (error, txResult) => {
     // see universaldapp.js line 660 => 700 to check possible values of txResult (error case)
     finalCallback(error, txResult)
@@ -80,7 +81,7 @@ export function checkError (execResult, compiledContracts) {
     return ret
   }
   const exceptionError = execResult.errorMessage || ''
-  const error = `Error occured: ${execResult.errorMessage}.\n`
+  const error = `Error occurred: ${execResult.errorMessage}.\n`
   let msg = ''
   if (exceptionError.includes(errorCode.INVALID_OPCODE)) {
     msg = '\t\n\tThe execution might have thrown OR the EVM version used by the selected environment is not compatible with the compiler EVM version.\n'
@@ -113,7 +114,7 @@ export function checkError (execResult, compiledContracts) {
                 const decodedCustomErrorInputs = fn.decodeFunctionData(functionDesc, returnData)
                 decodedCustomErrorInputsClean = {}
                 let devdoc = {}
-                // "contract" reprensents the compilation result containing the NATSPEC documentation
+                // "contract" represents the compilation result containing the NATSPEC documentation
                 if (contract && fn.functions && Object.keys(fn.functions).length) {
                   const functionSignature = Object.keys(fn.functions)[0]
                   // we check in the 'devdoc' if there's a developer documentation for this error
@@ -122,7 +123,7 @@ export function checkError (execResult, compiledContracts) {
                   } catch (e) {
                     console.error(e.message)
                   }
-                  // we check in the 'userdoc' if there's an user documentation for this error
+                  // we check in the 'userdoc' if there's a user documentation for this error
                   try {
                     const userdoc = (contract.userdoc.errors && contract.userdoc.errors[functionSignature][0]) || {}
                     if (userdoc && (userdoc as any).notice) customError += ' : ' + (userdoc as any).notice // we append the user doc if any
@@ -171,6 +172,6 @@ export function checkError (execResult, compiledContracts) {
     msg = '\tState changes is not allowed in Static Call context\n'
     ret.error = true
   }
-  ret.message = `${error}\n${exceptionError}\n${msg}\nDebug the transaction to get more information.`
+  ret.message = `${error}\n${exceptionError}\n${msg}\nIf the transaction failed for not having enough gas, try increasing the gas limit gently.`
   return ret
 }

@@ -1,8 +1,10 @@
-import {ViewPlugin} from '@remixproject/engine-web'
+import { ViewPlugin } from '@remixproject/engine-web'
 import React, {useState, useRef, useReducer, useEffect, useCallback} from 'react' // eslint-disable-line
+import { CustomTooltip } from '@remix-ui/helper'
+const _paq = (window._paq = window._paq || [])
 
-import {AppModal, AlertModal, ModalTypes} from '@remix-ui/app'
-import {labels, textDark, textSecondary} from './constants'
+import { AppModal, AlertModal, ModalTypes } from '@remix-ui/app'
+import { labels, textDark, textSecondary } from './constants'
 
 import './remix-ui-settings.css'
 import {
@@ -19,15 +21,17 @@ import {
   saveIpfsSettingsToast,
   useAutoCompletion,
   useShowGasInEditor,
-  useDisplayErrors
+  useDisplayErrors,
+  saveEnvState
 } from './settingsAction'
-import {initialState, toastInitialState, toastReducer, settingReducer} from './settingsReducer'
+import { initialState, toastInitialState, toastReducer, settingReducer } from './settingsReducer'
 import {Toaster} from '@remix-ui/toaster' // eslint-disable-line
-import {RemixUiThemeModule, ThemeModule} from '@remix-ui/theme-module'
-import {RemixUiLocaleModule, LocaleModule} from '@remix-ui/locale-module'
-import {FormattedMessage, useIntl} from 'react-intl'
-import {GithubSettings} from './github-settings'
-import {EtherscanSettings} from './etherscan-settings'
+import { RemixUiThemeModule, ThemeModule } from '@remix-ui/theme-module'
+import { RemixUiLocaleModule, LocaleModule } from '@remix-ui/locale-module'
+import { FormattedMessage, useIntl } from 'react-intl'
+import { GithubSettings } from './github-settings'
+import { EtherscanSettings } from './etherscan-settings'
+import { SindriSettings } from './sindri-settings'
 
 /* eslint-disable-next-line */
 export interface RemixUiSettingsProps {
@@ -36,6 +40,7 @@ export interface RemixUiSettingsProps {
   editor: any
   _deps: any
   useMatomoAnalytics: boolean
+  useCopilot: boolean
   themeModule: ThemeModule
   localeModule: LocaleModule
 }
@@ -53,7 +58,6 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
   const [ipfsProtocol, setipfsProtocol] = useState('')
   const [ipfsProjectId, setipfsProjectId] = useState('')
   const [ipfsProjectSecret, setipfsProjectSecret] = useState('')
-  const copilotDownload = useRef(null)
 
   const intl = useIntl()
   const initValue = () => {
@@ -68,6 +72,9 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
 
     const useShowGas = props.config.get('settings/show-gas')
     if (useShowGas === null || useShowGas === undefined) useShowGasInEditor(props.config, true, dispatch)
+
+    const enableSaveEnvState = props.config.get('settings/save-evm-state')
+    if (enableSaveEnvState === null || enableSaveEnvState === undefined) saveEnvState(props.config, true, dispatch)
   }
   useEffect(() => initValue(), [resetState, props.config])
   useEffect(() => initValue(), [])
@@ -76,14 +83,14 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
     const token = props.config.get('settings/' + labels['gist'].key)
     if (token) {
       setTokenValue((prevState) => {
-        return {...prevState, gist: token}
+        return { ...prevState, gist: token }
       })
     }
 
     const etherscantoken = props.config.get('settings/' + labels['etherscan'].key)
     if (etherscantoken) {
       setTokenValue((prevState) => {
-        return {...prevState, etherscan: etherscantoken}
+        return { ...prevState, etherscan: etherscantoken }
       })
     }
     const configPrivateBeeAddress = props.config.get('settings/swarm-private-bee-address')
@@ -129,48 +136,23 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
     textWrapEventAction(props.config, props.editor, event.target.checked, dispatch)
   }
 
-  const onchangeCopilotActivate = async (event) => {
-    if (!event.target.checked) {
-      copilotActivate(props.config, event.target.checked, dispatch)
-      props.plugin.call('copilot-suggestion', 'uninstall')
+  const onchangeCopilotActivate = () => {
+    if (!props.useCopilot) {
+      copilotActivate(props.config, props.useCopilot, dispatch)
       return
-    }   
-    const message = <div>Please wait while the copilot is downloaded. <span ref={copilotDownload}>0</span>/100 .</div>
-    props.plugin.on('copilot-suggestion', 'loading', (data) => {
-      if (!copilotDownload.current) return
-      const loaded = ((data.loaded / data.total) * 100).toString()
-      const dot = loaded.match(/(.*)\./g)
-      copilotDownload.current.innerText = dot ? dot[0].replace('.', '') : loaded
-    })
-    const modalActivate: AppModal = {
-      id: 'loadcopilotActivate',
-      title: 'Download Solidity copilot',
-      modalType: ModalTypes.default,
-      okLabel: 'Close',
-      message,
-      okFn: async() => {
-        props.plugin.off('copilot-suggestion', 'loading')
-        if (await props.plugin.call('copilot-suggestion', 'status')) {
-          copilotActivate(props.config, true, dispatch)          
-        } else {
-          props.plugin.call('copilot-suggestion', 'uninstall')
-          copilotActivate(props.config, false, dispatch)
-        }
-      },
-      hideFn: async () => {
-        props.plugin.off('copilot-suggestion', 'loading')
-        if (await props.plugin.call('copilot-suggestion', 'status')) {
-          copilotActivate(props.config, true, dispatch)          
-        } else {
-          props.plugin.call('copilot-suggestion', 'uninstall')
-          copilotActivate(props.config, false, dispatch)
-        }
-      }
     }
-    props.plugin.call('copilot-suggestion', 'init')
-    props.plugin.call('notification', 'modal', modalActivate)
-    
+
+    const startCopilot = async () => {
+      copilotActivate(props.config, props.useCopilot, dispatch)
+    }
+
+    startCopilot()
   }
+
+  useEffect(() => {
+    if (props.useCopilot !== null) copilotActivate(props.config, props.useCopilot, dispatch)
+    onchangeCopilotActivate()
+  }, [props.useCopilot])
 
   const onchangeCopilotMaxNewToken = (event) => {
     copilotMaxNewToken(props.config, parseInt(event.target.value), dispatch)
@@ -199,6 +181,10 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
     useDisplayErrors(props.config, event.target.checked, dispatch)
   }
 
+  const onchangeSaveEnvState= (event) => {
+    saveEnvState(props.config, event.target.checked, dispatch)
+  }
+
   const getTextClass = (key) => {
     if (props.config.get(key)) {
       return textDark
@@ -216,6 +202,7 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
     const isAutoCompleteChecked = props.config.get('settings/auto-completion') || false
     const isShowGasInEditorChecked = props.config.get('settings/show-gas') || false
     const displayErrorsChecked = props.config.get('settings/display-errors') || false
+    const isSaveEvmStateChecked = props.config.get('settings/save-evm-state') || false
     return (
       <div className="$border-top">
         <div className="d-flex justify-content-end pr-4">
@@ -262,6 +249,13 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
               htmlFor="generatecontractmetadata"
             >
               <FormattedMessage id="settings.generateContractMetadataText" />
+              <CustomTooltip
+                placement="auto"
+                tooltipId="settings-tooltip-metadata"
+                tooltipText={intl.formatMessage({ id: 'settings.generateContractMetadataTooltip' })}
+              >
+                <i className="ml-1 far fa-info-circle"></i>
+              </CustomTooltip>
             </label>
           </div>
           <div className="mt-2 custom-control custom-checkbox mb-1">
@@ -309,20 +303,23 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
           <div className="custom-control custom-checkbox mb-1">
             <input onChange={onchangePersonal} id="personal" type="checkbox" className="custom-control-input" checked={isPersonalChecked} />
             <label className={`form-check-label custom-control-label align-middle ${getTextClass('settings/personal-mode')}`} htmlFor="personal">
-              <i className="fas fa-exclamation-triangle text-warning" aria-hidden="true"></i> <span> </span>
-              <span> </span>
               <FormattedMessage id="settings.enablePersonalModeText" />
-              &nbsp;
-              <FormattedMessage id="settings.warnText" />
+              <CustomTooltip
+                placement="auto"
+                tooltipId="settings-tooltip-personalMode"
+                tooltipText={intl.formatMessage({ id: 'settings.enablePersonalModeTooltip' })}
+              >
+                <i className="ml-1 fas fa-exclamation-triangle text-warning" aria-hidden="true"></i>
+              </CustomTooltip>
             </label>
           </div>
           <div className="custom-control custom-checkbox mb-1">
             <input onChange={onchangeMatomoAnalytics} id="settingsMatomoAnalytics" type="checkbox" className="custom-control-input" checked={isMatomoChecked} />
-            <label className={`form-check-label custom-control-label align-middle ${getTextClass('settings/matomo-analytics')}`} htmlFor="settingsMatomoAnalytics">
+            <label data-id="label-matomo-settings" className={`form-check-label custom-control-label align-middle ${getTextClass('settings/matomo-analytics')}`} htmlFor="settingsMatomoAnalytics">
               <span>
                 <FormattedMessage id="settings.matomoAnalytics" />
               </span>
-              <a href="https://medium.com/p/66ef69e14931/" target="_blank">
+              <a href="https://medium.com/remix-ide/help-us-improve-remix-ide-66ef69e14931" target="_blank">
                 {' '}
                 <FormattedMessage id="settings.analyticsInRemix" />
               </a>{' '}
@@ -330,6 +327,25 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
               <a target="_blank" href="https://matomo.org/free-software">
                 Matomo
               </a>
+              <CustomTooltip
+                placement="auto"
+                tooltipId="settings-tooltip-matomo"
+                tooltipText={intl.formatMessage({ id: 'settings.matomoAnalyticsTooltip' })}
+              >
+                <i className="ml-1 far fa-info-circle"></i>
+              </CustomTooltip>
+            </label>
+          </div>
+          <div className="custom-control custom-checkbox mb-1">
+            <input onChange={onchangeSaveEnvState} id="settingsEnableSaveEnvState" data-id="settingsEnableSaveEnvState" type="checkbox" className="custom-control-input" checked={isSaveEvmStateChecked} />
+            <label
+              className={`form-check-label custom-control-label align-middle ${getTextClass('settings/save-evm-state')}`}
+              data-id="settingsEnableSaveEnvStateLabel"
+              htmlFor="settingsEnableSaveEnvState"
+            >
+              <span>
+                <FormattedMessage id="settings.enableSaveEnvState" />
+              </span>
             </label>
           </div>
         </div>
@@ -385,7 +401,7 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
             id="saveswarmsettings"
             data-id="settingsTabSaveSwarmSettings"
             onClick={() => saveSwarmSettings()}
-            value={intl.formatMessage({id: 'settings.save'})}
+            value={intl.formatMessage({ id: 'settings.save' })}
             type="button"
             disabled={privateBeeAddress === ''}
           ></input>
@@ -438,35 +454,35 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
   const isCopilotActivated = props.config.get('settings/copilot/suggest/activate') || false
   let copilotMaxnewToken = props.config.get('settings/copilot/suggest/max_new_tokens')
   if (!copilotMaxnewToken) {
-    props.config.set('settings/copilot/suggest/max_new_tokens', 5)
-    copilotMaxnewToken = 5
+    props.config.set('settings/copilot/suggest/max_new_tokens', 10)
+    copilotMaxnewToken = 10
   }
   let copilotTemperatureValue = (props.config.get('settings/copilot/suggest/temperature')) * 100
   if (!copilotTemperatureValue) {
-    props.config.set('settings/copilot/suggest/temperature', 0.5)
-    copilotTemperatureValue = 0.5
+    props.config.set('settings/copilot/suggest/temperature', 0.9)
+    copilotTemperatureValue = 0.9
   }
 
-  if (isCopilotActivated) props.plugin.call('copilot-suggestion', 'init')
   const copilotSettings = () => (
     <div className="border-top">
       <div className="card-body pt-3 pb-2">
-        <h6 className="card-title">
+        <h6 className="card-title d-inline">
           <FormattedMessage id="settings.copilot" />
         </h6>
-
-        <div className="pt-2 mb-0">
-          <div className="text-secondary mb-0 h6">
-            <div>
-              <div className="custom-control custom-checkbox mb-1">
-                <input onChange={onchangeCopilotActivate} id="copilot-activate" type="checkbox" className="custom-control-input" checked={isCopilotActivated} />
-                <label className={`form-check-label custom-control-label align-middle ${getTextClass('settings/copilot/suggest/activate')}`} htmlFor="copilot-activate">
-                  <FormattedMessage id="settings.copilot.activate" />
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CustomTooltip placement="bottom" tooltipId="overlay-tooltip-aiDocumentation" tooltipText={<FormattedMessage id="remixUiTabs.tooltipText8" />}>
+          <span
+            data-id="remix_ai_docs"
+            id="remix_ai_docs"
+            className="btn pl-2 pr-0 py-0 d-inline ai-docs text-dark"
+            role='link'
+            onClick={()=>{
+              window.open("https://remix-ide.readthedocs.io/en/latest/ai.html")
+              _paq.push(['trackEvent', 'ai', 'remixAI', 'documentation'])
+            }}
+          >
+            <i aria-hidden="true" className="fas fa-book"></i>
+          </span>
+        </CustomTooltip>
 
         <div className="pt-2 mb-0">
           <div className="text-secondary mb-0 h6">
@@ -475,7 +491,7 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
                 <label className={`form-check-label align-middle ${getTextClass('settings/copilot/suggest/max_new_tokens')}`} htmlFor="copilot-activate">
                   <FormattedMessage id="settings.copilot.max_new_tokens" /> - <span>{copilotMaxnewToken}</span>
                 </label>
-                <input onChange={onchangeCopilotMaxNewToken} id="copilot-max-new-token" value={copilotMaxnewToken} min='1' max='150' type="range" className="custom-range" />                
+                <input onChange={onchangeCopilotMaxNewToken} id="copilot-max-new-token" value={copilotMaxnewToken} min='1' max='150' type="range" className="custom-range" />
               </div>
             </div>
           </div>
@@ -488,7 +504,7 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
                 <label className={`form-check-label align-middle ${getTextClass('settings/copilot/suggest/temperature')}`} htmlFor="copilot-activate">
                   <FormattedMessage id="settings.copilot.temperature" /> - <span>{copilotTemperatureValue / 100}</span>
                 </label>
-                <input onChange={onchangeCopilotTemperature} id="copilot-temperature" value={copilotTemperatureValue} min='0' max='100' type="range" className="custom-range" />                
+                <input onChange={onchangeCopilotTemperature} id="copilot-temperature" value={copilotTemperatureValue} min='0' max='100' type="range" className="custom-range" />
               </div>
             </div>
           </div>
@@ -564,7 +580,7 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
             id="saveIpfssettings"
             data-id="settingsTabSaveIpfsSettings"
             onClick={() => saveIpfsSettings()}
-            value={intl.formatMessage({id: 'settings.save'})}
+            value={intl.formatMessage({ id: 'settings.save' })}
             type="button"
           ></input>
         </div>
@@ -599,10 +615,19 @@ export const RemixUiSettings = (props: RemixUiSettingsProps) => {
         }}
         config={props.config}
       />
+      <SindriSettings
+        saveToken={(sindriToken: string) => {
+          saveTokenToast(props.config, dispatchToast, sindriToken, 'sindri-access-token')
+        }}
+        removeToken={() => {
+          removeTokenToast(props.config, dispatchToast, 'sindri-access-token')
+        }}
+        config={props.config}
+      />
       {swarmSettings()}
       {ipfsSettings()}
       <RemixUiThemeModule themeModule={props._deps.themeModule} />
-      <RemixUiLocaleModule localeModule={props._deps.localeModule} />      
+      <RemixUiLocaleModule localeModule={props._deps.localeModule} />
     </div>
   )
 }

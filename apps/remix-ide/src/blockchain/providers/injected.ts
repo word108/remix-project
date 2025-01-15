@@ -1,5 +1,5 @@
-import Web3 from 'web3'
-import { hashPersonalMessage, isHexString } from '@ethereumjs/util'
+import { Web3 } from 'web3'
+import { hashPersonalMessage, isHexString, bytesToHex } from '@ethereumjs/util'
 import { ExecutionContext } from '../execution-context'
 
 export class InjectedProvider {
@@ -29,7 +29,8 @@ export class InjectedProvider {
 
   async getBalanceInEther (address) {
     const balance = await this.executionContext.web3().eth.getBalance(address)
-    return Web3.utils.fromWei(balance.toString(10), 'ether')
+    const balInString = balance.toString(10)
+    return balInString === '0' ? balInString : Web3.utils.fromWei(balInString, 'ether')
   }
 
   getGasPrice (cb) {
@@ -37,18 +38,14 @@ export class InjectedProvider {
   }
 
   signMessage (message, account, _passphrase, cb) {
+    message = isHexString(message) ? message : Web3.utils.utf8ToHex(message)
     const messageHash = hashPersonalMessage(Buffer.from(message))
     try {
-      message = isHexString(message) ? message : Web3.utils.utf8ToHex(message)
-      this.executionContext.web3().eth.personal.sign(message, account).then((error, signedData) => {
-        cb(error, '0x' + messageHash.toString('hex'), signedData)
+      this.executionContext.web3().eth.sign(messageHash, account).then((signedData) => {
+        cb(null, bytesToHex(messageHash), signedData)
       }).catch((error => cb(error)))
     } catch (e) {
       cb(e.message)
     }
-  }
-
-  getProvider () {
-    return 'injected'
   }
 }

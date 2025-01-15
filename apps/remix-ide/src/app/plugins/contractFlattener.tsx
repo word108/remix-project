@@ -1,7 +1,9 @@
+/* eslint-disable prefer-const */
 import React from 'react'
-import {Plugin} from '@remixproject/engine'
-import {customAction} from '@remixproject/plugin-api'
-import {concatSourceFiles, getDependencyGraph, normalizeContractPath} from '@remix-ui/solidity-compiler'
+import { Plugin } from '@remixproject/engine'
+import { customAction } from '@remixproject/plugin-api'
+import { concatSourceFiles, getDependencyGraph, normalizeContractPath } from '@remix-ui/solidity-compiler'
+import type { CompilerInput, CompilationSource } from '@remix-project/remix-solidity'
 
 const _paq = (window._paq = window._paq || [])
 
@@ -25,7 +27,7 @@ export class ContractFlattener extends Plugin {
       if (data.sources && Object.keys(data.sources).length > 1) {
         if (this.triggerFlattenContract) {
           this.triggerFlattenContract = false
-          await this.flattenContract(source, file, data)
+          await this.flattenContract(source, file, data, JSON.parse(input))
         }
       }
     })
@@ -47,20 +49,21 @@ export class ContractFlattener extends Plugin {
    * Takes the flattened result, writes it to a file and returns the result.
    * @returns {Promise<string>}
    */
-  async flattenContract(source: {sources: any; target: string}, filePath: string, data: {contracts: any; sources: any}): Promise<string> {
+  async flattenContract(source: {sources: any; target: string}, filePath: string, data: {contracts: any; sources: any}, input: CompilerInput): Promise<string> {
     const appendage = '_flattened.sol'
     const normalized = normalizeContractPath(filePath)
     const path = `${normalized[normalized.length - 2]}${appendage}`
-    const ast = data.sources
+    const ast: { [contractName: string]: CompilationSource } = data.sources
     let dependencyGraph
     let sorted
     let result
     let sources
+    let order: string[] = []
     try {
-      dependencyGraph = getDependencyGraph(ast, filePath)
+      dependencyGraph = getDependencyGraph(ast, filePath, input.settings.remappings, order)
       sorted = dependencyGraph.isEmpty() ? [filePath] : dependencyGraph.sort().reverse()
       sources = source.sources
-      result = concatSourceFiles(sorted, sources)
+      result = concatSourceFiles(sorted, sources, order)
     } catch (err) {
       console.warn(err)
     }

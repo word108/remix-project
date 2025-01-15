@@ -1,10 +1,11 @@
 {
-    "version": "v0.42.0",
+    "version": "v0.59.0",
     "title": "RELEASE HIGHLIGHTS",
-    "highlight1": "Ask GPT for circom ZKP compiler errors/warnings",
-    "highlight2": "Default Solidity compiler set to 0.8.24 with support of 'Cancun' EVM",
-    "highlight3": "Workspace Template 'Uniswap v4 Periphery' renamed to 'Uniswap v4 Template'",
+    "highlight1": "Fork & delete VM state",
+    "highlight2": "Syntax highlighting for Noir(.nr) files",
+    "highlight3": "",
     "highlight4": "",
     "more": "Read More",
-    "moreLink": "https://medium.com/remix-ide/remix-release-v0-42-0-56ec48a49ae0"
+    "moreLink": "https://medium.com/remix-ide/remix-release-v0-59-0-306881e41984?source=friends_link&sk=be2390827519bf2d7530f013021160b9"
   }
+  

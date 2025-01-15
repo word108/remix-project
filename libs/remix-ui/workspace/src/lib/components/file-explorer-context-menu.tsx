@@ -1,9 +1,9 @@
 import React, {useRef, useEffect, useState, useContext} from 'react' // eslint-disable-line
-import {useIntl} from 'react-intl'
-import {action, FileExplorerContextMenuProps} from '../types'
+import { useIntl } from 'react-intl'
+import { action, FileExplorerContextMenuProps } from '../types'
 
 import '../css/file-explorer-context-menu.css'
-import {customAction} from '@remixproject/plugin-api'
+import { customAction } from '@remixproject/plugin-api'
 import UploadFile from './upload-file'
 import { appPlatformTypes, platformContext } from '@remix-ui/app'
 
@@ -40,6 +40,8 @@ export const FileExplorerContextMenu = (props: FileExplorerContextMenuProps) => 
     focus,
     downloadPath,
     uploadFile,
+    publishManyFilesToGist,
+    signTypedData,
     ...otherProps
   } = props
   const contextMenuRef = useRef(null)
@@ -70,7 +72,7 @@ export const FileExplorerContextMenu = (props: FileExplorerContextMenuProps) => 
       return !(el.key === '' && el.type === 'folder')
     })
 
-    if (focus[0].key === 'contextMenu') {
+    if (focus?.length && focus[0].key === 'contextMenu') {
       return true
     }
 
@@ -85,7 +87,7 @@ export const FileExplorerContextMenu = (props: FileExplorerContextMenuProps) => 
   }
 
   const itemMatchesCondition = (item: action, itemType: string, itemPath: string) => {
-    if( platform === appPlatformTypes.desktop && item.platform && item.platform === appPlatformTypes.web) return false
+    if ( platform === appPlatformTypes.desktop && item.platform && item.platform === appPlatformTypes.web) return false
     else if (item.type && Array.isArray(item.type) && (item.type.findIndex(name => name === itemType) !== -1)) return true
     else if (item.path && Array.isArray(item.path) && (item.path.findIndex(key => key === itemPath) !== -1)) return true
     else if (item.extension && Array.isArray(item.extension) && (item.extension.findIndex(ext => itemPath.endsWith(ext)) !== -1)) return true
@@ -187,15 +189,19 @@ export const FileExplorerContextMenu = (props: FileExplorerContextMenuProps) => 
                 break
               case 'Push changes to gist':
                 _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'pushToChangesoGist'])
-                pushChangesToGist(path, type)
+                pushChangesToGist(path)
                 break
               case 'Publish folder to gist':
                 _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'publishFolderToGist'])
-                publishFolderToGist(path, type)
+                publishFolderToGist(path)
                 break
               case 'Publish file to gist':
                 _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'publishFileToGist'])
-                publishFileToGist(path, type)
+                publishFileToGist(path)
+                break
+              case 'Publish files to gist':
+                _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'publishFilesToGist'])
+                publishManyFilesToGist()
                 break
               case 'Run':
                 _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'runScript'])
@@ -227,11 +233,15 @@ export const FileExplorerContextMenu = (props: FileExplorerContextMenuProps) => 
                 break
               case 'Publish Workspace to Gist':
                 _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'publishWorkspace'])
-                publishFolderToGist(path, type)
+                publishFolderToGist(path)
+                break
+              case 'Sign Typed Data':
+                _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', 'signTypedData'])
+                signTypedData(path)
                 break
               default:
                 _paq.push(['trackEvent', 'fileExplorer', 'contextMenu', `${item.id}/${item.name}`])
-                emit && emit({...item, path: [path]} as customAction)
+                emit && emit({ ...item, path: [path]} as customAction)
                 break
               }
               hideContextMenu()
@@ -251,7 +261,7 @@ export const FileExplorerContextMenu = (props: FileExplorerContextMenuProps) => 
     <div
       id="menuItemsContainer"
       className="p-1 remixui_contextContainer bg-light shadow border"
-      style={{left: pageX, top: pageY}}
+      style={{ left: pageX, top: pageY }}
       ref={contextMenuRef}
       onBlur={hideContextMenu}
       tabIndex={500}

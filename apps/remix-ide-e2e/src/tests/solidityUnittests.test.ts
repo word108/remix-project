@@ -180,16 +180,17 @@ module.exports = {
       // creating a new workspace
       .click('*[data-id="workspacesMenuDropdown"]')
       .click('*[data-id="workspacecreate"]')
+      .waitForElementPresent('*[data-id="create-remixDefault"]')
+      .scrollAndClick('*[data-id="create-remixDefault"]')
       .waitForElementVisible('*[data-id="modalDialogCustomPromptTextCreate"]')
-      .click('*[data-id="fileSystemModalDialogContainer-react"] input[data-id="modalDialogCustomPromptTextCreate"]')
-      .setValue('*[data-id="fileSystemModalDialogContainer-react"] input[data-id="modalDialogCustomPromptTextCreate"]', 'workspace_new')
+      .click('input[data-id="modalDialogCustomPromptTextCreate"]')
+      .setValue('input[data-id="modalDialogCustomPromptTextCreate"]', 'workspace_new')
       .pause(2000)
-      .getValue('*[data-id="fileSystemModalDialogContainer-react"] input[data-id="modalDialogCustomPromptTextCreate"]', (result) => {
+      .getValue('input[data-id="modalDialogCustomPromptTextCreate"]', (result) => {
         console.log(result)
         browser.assert.equal(result.value, 'workspace_new')
       })
-      .waitForElementVisible('*[data-id="fileSystem-modal-footer-ok-react"]')
-      .click('*[data-id="fileSystem-modal-footer-ok-react"]')
+      .modalFooterOKClick('TemplatesSelection')
       .pause(3000)
       .currentWorkspaceIs('workspace_new')
       .waitForElementVisible('li[data-id="treeViewLitreeViewItem.deps/remix-tests/remix_tests.sol"]')
@@ -244,13 +245,14 @@ module.exports = {
       .waitForElementVisible('*[data-id="testTabSolidityUnitTestsOutputheader"]', 120000)
       .waitForElementPresent('#solidityUnittestsOutput div[class^="testPass"]', 60000)
       .waitForElementContainsText('#solidityUnittestsOutput', 'tests/hhLogs_test.sol', 60000)
-      .assert.containsText('#journal > div:nth-child(3) > span', 'Before all:')
-      .assert.containsText('#journal > div:nth-child(3) > span', 'Inside beforeAll')
-      .assert.containsText('#journal > div:nth-child(4) > span', 'Check sender:')
-      .assert.containsText('#journal > div:nth-child(4) > span', 'msg.sender is 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4')
-      .assert.containsText('#journal > div:nth-child(5) > span', 'Check int logs:')
-      .assert.containsText('#journal > div:nth-child(5) > span', '10 20')
-      .assert.containsText('#journal > div:nth-child(5) > span', 'Number is 25')
+      .pause(2000)
+      .assert.textContains('#journal > div:nth-child(3) > span', 'Before all:')
+      .assert.textContains('#journal > div:nth-child(3) > span', 'Inside beforeAll')
+      .assert.textContains('#journal > div:nth-child(4) > span', 'Check sender:')
+      .assert.textContains('#journal > div:nth-child(4) > span', 'msg.sender is 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4')
+      .assert.textContains('#journal > div:nth-child(5) > span', 'Check int logs:')
+      .assert.textContains('#journal > div:nth-child(5) > span', '10 20')
+      .assert.textContains('#journal > div:nth-child(5) > span', 'Number is 25')
       .openFile('tests/hhLogs_test.sol')
       .removeFile('tests/hhLogs_test.sol', 'workspace_new')
   },
@@ -339,8 +341,12 @@ module.exports = {
 
   'Basic Solidity Unit tests with local compiler #group6': function (browser: NightwatchBrowser) {
     browser
+      .clickLaunchIcon('udapp')
+      .switchEnvironment('vm-cancun')
       .clickLaunchIcon('solidity')
       .setSolidityCompilerVersion('builtin')
+      .click('.remixui_compilerConfigSection')
+      .setValue('#evmVersionSelector', 'cancun') // Temporary fix
       .clickLaunchIcon('filePanel')
       .click('*[data-id="treeViewLitreeViewItemcontracts"]')
       .openFile('contracts/3_Ballot.sol')

@@ -1,6 +1,7 @@
 import { Plugin } from '@remixproject/engine'
 import * as packageJson from '../../../../../package.json'
 import {isBigInt} from 'web3-validator'
+import { addressToString } from "@remix-ui/helper"
 
 export const profile = {
   name: 'web3Provider',
@@ -54,9 +55,30 @@ export class Web3ProviderModule extends Plugin {
                       console.log('receipt available but contract address not present', receipt)
                       return
                     }
-                    const contractData = await this.call('compilerArtefacts', 'getContractDataFromAddress', receipt.contractAddress)
-                    if (contractData) this.call('udapp', 'addInstance', receipt.contractAddress, contractData.contract.abi, contractData.name)
+                    const contractAddressStr = addressToString(receipt.contractAddress)
+                    const contractData = await this.call('compilerArtefacts', 'getContractDataFromAddress', contractAddressStr)
+                    if (contractData) {
+                      const data = await this.call('compilerArtefacts', 'getCompilerAbstract', contractData.file)
+                      const contractObject = {
+                        name: contractData.name,
+                        abi: contractData.contract.abi,
+                        compiler: data,
+                        contract: {
+                          file : contractData.file,
+                          object: contractData.contract
+                        }
+                      }
+                      this.call('udapp', 'addInstance', contractAddressStr, contractData.contract.abi, contractData.name, contractObject)
+                      await this.call('compilerArtefacts', 'addResolvedContract', contractAddressStr, data)
+                    }
                   }, 50)
+                  const isVM = this.blockchain.executionContext.isVM()
+    
+                  if (isVM && this.blockchain.config.get('settings/save-evm-state')) {
+                    await this.blockchain.executionContext.getStateDetails().then((state) => {
+                      this.call('fileManager', 'writeFile', `.states/${this.blockchain.executionContext.getProvider()}/state.json`, state)
+                    })
+                  }
                 }
               }
               resolve(message)
@@ -64,7 +86,7 @@ export class Web3ProviderModule extends Plugin {
             try {
               resultFn(null, await provider.sendAsync(payload))
             } catch (e) {
-              resultFn(e.error ? new Error(e.error) : new Error(e))
+              resultFn(e.error ? e.error : e)
             }
           } else {
             reject(new Error('User denied permission'))

@@ -1,28 +1,30 @@
-import {Profile} from '@remixproject/plugin-utils'
+import { Profile } from '@remixproject/plugin-utils'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars,no-use-before-define
 import React, { useContext, useEffect, useState } from 'react'
-import {FormattedMessage, useIntl} from 'react-intl'
+import { FormattedMessage, useIntl } from 'react-intl'
 import '../remix-ui-plugin-manager.css'
-import {CustomTooltip} from '@remix-ui/helper'
+import { CustomTooltip } from '@remix-ui/helper'
 import { onLineContext } from '@remix-ui/app'
+const _paq = (window._paq = window._paq || [])
+
 interface PluginCardProps {
   profile: any
   buttonText: string
   activatePlugin: (plugin: string) => void
 }
 
-function InactivePluginCard({profile, buttonText, activatePlugin}: PluginCardProps) {
+function InactivePluginCard({ profile, buttonText, activatePlugin }: PluginCardProps) {
   const online = useContext(onLineContext)
   const [canBeActivated, setCanBeActivated] = useState(false)
   const intl = useIntl()
   useEffect(() => {
-    if(!online) {
-      if(profile.url && (!profile.url.includes('http') || profile.url.includes('localhost') || profile.url.includes('127.0.0.1'))) {
+    if (!online) {
+      if (profile.url && (!profile.url.includes('http') || profile.url.includes('localhost') || profile.url.includes('127.0.0.1'))) {
         setCanBeActivated(true)
-      }else{
+      } else {
         setCanBeActivated(false)
       }
-    }else{
+    } else {
       setCanBeActivated(true)
     }
   },[online])
@@ -34,16 +36,33 @@ function InactivePluginCard({profile, buttonText, activatePlugin}: PluginCardPro
           <h6 className="remixui_displayName plugin-name">
             <div>
               {profile.displayName || profile.name}
-              {profile?.maintainedBy?.toLowerCase() == 'remix' && (
+              {profile?.maintainedBy?.toLowerCase() == 'remix' ? (
                 <CustomTooltip
                   placement="right"
-                  tooltipId="pluginManagerInactiveTitleByRemix"
+                  tooltipId="pluginManagerActiveTitleByRemix"
                   tooltipClasses="text-nowrap"
                   tooltipText={<FormattedMessage id="pluginManager.maintainedByRemix" />}
                 >
                   <i aria-hidden="true" className="px-1 text-success fas fa-check"></i>
-                </CustomTooltip>
-              )}
+                </CustomTooltip>)
+                : profile?.maintainedBy ? (
+                  <CustomTooltip
+                    placement="right"
+                    tooltipId="pluginManagerActiveTitleByRemix"
+                    tooltipClasses="text-nowrap"
+                    tooltipText={"Maintained by " + profile?.maintainedBy}
+                  >
+                    <i aria-hidden="true" className="px-1 text-secondary far fa-exclamation-circle"></i>
+                  </CustomTooltip>)
+                  : (<CustomTooltip
+                    placement="right"
+                    tooltipId="pluginManagerActiveTitleExternally"
+                    tooltipClasses="text-nowrap"
+                    tooltipText={<FormattedMessage id="pluginManager.maintainedExternally" />}
+                  >
+                    <i aria-hidden="true" className="px-1 text-secondary far fa-exclamation-circle"></i>
+                  </CustomTooltip>)
+              }
               {profile.documentation && (
                 <CustomTooltip
                   placement="right"
@@ -81,11 +100,12 @@ function InactivePluginCard({profile, buttonText, activatePlugin}: PluginCardPro
                 placement="right"
                 tooltipId={`pluginManagerInactiveActiveBtn${profile.name}`}
                 tooltipClasses="text-nowrap"
-                tooltipText={<FormattedMessage id="pluginManager.activatePlugin" values={{pluginName: profile.displayName || profile.name}} />}
+                tooltipText={<FormattedMessage id="pluginManager.activatePlugin" values={{ pluginName: profile.displayName || profile.name }} />}
               >
-                {!canBeActivated ? <button className="btn btn-secondary btn-sm">{intl.formatMessage({id: 'pluginManager.UnavailableOffline'})}</button> : (
+                {!canBeActivated ? <button className="btn btn-secondary btn-sm">{intl.formatMessage({ id: 'pluginManager.UnavailableOffline' })}</button> : (
                   <button
                     onClick={() => {
+                      _paq.push(['trackEvent', 'pluginManager', 'activateBtn', 'activate btn' + profile.name])
                       activatePlugin(profile.name)
                     }}
                     className="btn btn-success btn-sm"

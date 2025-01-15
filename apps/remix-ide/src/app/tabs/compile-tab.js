@@ -9,7 +9,7 @@ import { QueryParams } from '@remix-project/remix-lib'
 import * as packageJson from '../../../../../package.json'
 import { compilerConfigChangedToastMsg, compileToastMsg } from '@remix-ui/helper'
 import { isNative } from '../../remixAppManager'
-
+import { Registry } from '@remix-project/remix-lib'
 const profile = {
   name: 'solidity',
   displayName: 'Solidity compiler',
@@ -28,7 +28,7 @@ const profile = {
 // - events: ['compilationFinished'],
 // - methods: ['getCompilationResult']
 
-class CompileTab extends CompilerApiMixin(ViewPlugin) { // implements ICompilerApi
+export default class CompileTab extends CompilerApiMixin(ViewPlugin) { // implements ICompilerApi
   constructor (config, fileManager) {
     super(profile)
     this.fileManager = fileManager
@@ -90,18 +90,26 @@ class CompileTab extends CompilerApiMixin(ViewPlugin) { // implements ICompilerA
     return this.fileManager.mode
   }
 
+  isDesktop () {
+    return Registry.getInstance().get('platform').api.isDesktop()
+  }
+
   /**
    * set the compiler configuration
    * This function is used by remix-plugin compiler API.
    * @param {object} settings {evmVersion, optimize, runs, version, language}
    */
-  setCompilerConfig (settings) {
+  async setCompilerConfig (settings) {
     super.setCompilerConfig(settings)
     this.renderComponent()
     // @todo(#2875) should use loading compiler return value to check whether the compiler is loaded instead of "setInterval"
     const value = JSON.stringify(settings, null, '\t')
+    let pluginInfo
+    pluginInfo = await this.call('udapp', 'showPluginDetails')
 
-    this.call('notification', 'toast', compilerConfigChangedToastMsg(this.currentRequest.from, value))
+    if (this.currentRequest.from === 'udapp') {
+      this.call('notification', 'toast', compilerConfigChangedToastMsg((pluginInfo ? pluginInfo.displayName : this.currentRequest.from ), value))
+    }
   }
 
   compile (fileName) {

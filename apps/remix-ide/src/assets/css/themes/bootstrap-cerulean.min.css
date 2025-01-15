@@ -10,6 +10,7 @@
 * Copyright 2011-2020 Twitter, Inc.
 * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
 */:root {
+    --ai: #da2de4;
     --blue:#033c73;
     --indigo:#6610f2;
     --purple:#6f42c1;
@@ -35,6 +36,7 @@
     --body-bg: #fff;
     --text-bg-mark: #fcf8e3;
     --custom-select: #fff;
+    --brand-dark-blue: #222496;
     --breakpoint-xs:0;
     --breakpoint-sm:576px;
     --breakpoint-md:768px;
@@ -65,6 +67,19 @@ body {
     text-align:left;
     background-color:#fff
 }
+
+*::-webkit-scrollbar {
+  width:  8px;
+  height: 6px;
+  background-color: var(--body-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--secondary);
+  opacity: 0.3;
+  border-radius: 30px;
+}
+
 [tabindex="-1"]:focus:not(:focus-visible) {
     outline:0!important
 }
@@ -3117,7 +3132,8 @@ input[type=button].btn-block,input[type=reset].btn-block,input[type=submit].btn-
 .custom-control-label {
     position:relative;
     margin-bottom:0;
-    vertical-align:top
+    vertical-align:top;
+    padding-top: 0.15rem;
 }
 .custom-control-label::before {
     position:absolute;
@@ -5031,8 +5047,10 @@ a.close.disabled {
 }
 .modal-header .close {
     padding:1rem 1rem;
-    margin:-1rem -1rem -1rem auto
+    margin:-1rem -1rem -1rem auto;
+    cursor: pointer;
 }
+
 .modal-title {
     margin-bottom:0;
     line-height:1.5
@@ -8372,6 +8390,9 @@ a.text-danger:focus,a.text-danger:hover {
 }
 a.text-light:focus,a.text-light:hover {
     color:#cbd3da!important
+}
+.text-ai {
+  color: #da2de4 !important;
 }
 .text-dark {
     color:#343a40!important

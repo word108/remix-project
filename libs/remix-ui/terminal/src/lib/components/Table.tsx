@@ -1,8 +1,8 @@
 import React from 'react' // eslint-disable-line
-import {FormattedMessage, useIntl} from 'react-intl'
+import { FormattedMessage, useIntl } from 'react-intl'
 import {CopyToClipboard} from '@remix-ui/clipboard' // eslint-disable-line
-import {shortenHexData} from '@remix-ui/helper'
-import {execution} from '@remix-project/remix-lib'
+import { shortenHexData } from '@remix-ui/helper'
+import { execution } from '@remix-project/remix-lib'
 const typeConversion = execution.typeConversion
 
 const showTable = (opts, showTableHash) => {
@@ -17,17 +17,17 @@ const showTable = (opts, showTableHash) => {
   }
   let callWarning = ''
   if (opts.isCall) {
-    callWarning = intl.formatMessage({id: 'terminal.callWarning'})
+    callWarning = intl.formatMessage({ id: 'terminal.callWarning' })
   }
   if (!opts.isCall) {
     if (opts.status !== undefined && opts.status !== null) {
       if (opts.status === 0 || opts.status === '0x0' || opts.status === false) {
-        msg = intl.formatMessage({id: 'terminal.msg1'})
+        msg = intl.formatMessage({ id: 'terminal.msg1' })
       } else if (opts.status === 1 || opts.status === '0x1' || opts.status === true) {
-        msg = intl.formatMessage({id: 'terminal.msg2'})
+        msg = intl.formatMessage({ id: 'terminal.msg2' })
       }
     } else {
-      msg = intl.formatMessage({id: 'terminal.msg3'})
+      msg = intl.formatMessage({ id: 'terminal.msg3' })
     }
   }
 
@@ -158,6 +158,17 @@ const showTable = (opts, showTableHash) => {
             </td>
           </tr>
         ) : null}
+        {opts.output ? (
+          <tr className="remix_ui_terminal_tr">
+            <td className="remix_ui_terminal_td" data-shared={`key_${opts.hash}`}>
+              <FormattedMessage id="terminal.output" />
+            </td>
+            <td className="remix_ui_terminal_td" data-id={`txLoggerTableHash${opts.hash}`} data-shared={`pair_${opts.hash}`}>
+              {opts.output}
+              <CopyToClipboard content={opts.output} />
+            </td>
+          </tr>
+        ) : null}
         {opts['decoded input'] ? (
           <tr className="remix_ui_terminal_tr">
             <td className="remix_ui_terminal_td" data-shared={`key_${opts.hash}`}>
@@ -188,7 +199,17 @@ const showTable = (opts, showTableHash) => {
             <td className="remix_ui_terminal_td" data-id={`txLoggerTableHash${opts.hash}`} data-shared={`pair_${opts.hash}`}>
               {JSON.stringify(stringified, null, '\t')}
               <CopyToClipboard content={JSON.stringify(stringified, null, '\t')} />
-              <CopyToClipboard content={JSON.stringify(opts.logs.raw || '0')} />
+            </td>
+          </tr>
+        ) : null}
+        {opts.logs ? (
+          <tr className="remix_ui_terminal_tr">
+            <td className="remix_ui_terminal_td" data-shared={`key_${opts.hash}`}>
+              <FormattedMessage id="terminal.rawlogs" />
+            </td>
+            <td className="remix_ui_terminal_td" data-id={`txLoggerTableHash${opts.hash}`} data-shared={`pair_${opts.hash}`}>
+              {JSON.stringify(opts.logs.raw || '0', null, 2)}
+              <CopyToClipboard content={JSON.stringify(opts.logs.raw || '0', null, 2)} />
             </td>
           </tr>
         ) : null}

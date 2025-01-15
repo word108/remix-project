@@ -1,10 +1,10 @@
 // eslint-disable-next-line no-unused-vars
 import React from 'react'
 import { RunTab } from '../types/run-tab'
-import { resetAndInit, setupEvents } from './events'
-import { createNewBlockchainAccount, setExecutionContext, signMessageWithAddress } from './account'
-import { clearInstances, clearPopUp, removeInstance, setAccount, setGasFee, setMatchPassphrasePrompt, 
-  setNetworkNameFromProvider, setPassphrasePrompt, setSelectedContract, setSendTransactionValue, setUnit, 
+import { resetAndInit, setupEvents, setEventsDispatch } from './events'
+import { createNewBlockchainAccount, setExecutionContext, signMessageWithAddress, addFileInternal } from './account'
+import { clearInstances, clearPopUp, removeInstance, pinInstance, unpinInstance, setAccount, setGasFee, setMatchPassphrasePrompt,
+  setNetworkNameFromProvider, setPassphrasePrompt, setSelectedContract, setSendTransactionValue, setUnit,
   updateBaseFeePerGas, updateConfirmSettings, updateGasPrice, updateGasPriceStatus, updateMaxFee, updateMaxPriorityFee, updateScenarioPath } from './actions'
 import { createInstance, getContext, getFuncABIInputs, getSelectedContract, loadAddress, runTransactions, updateInstanceBalance, syncContractsInternal, isValidContractAddress, isValidContractUpgrade } from './deploy'
 import { CompilerAbstract as CompilerAbstractType } from '@remix-project/remix-solidity'
@@ -20,15 +20,19 @@ declare global {
 }
 
 const _paq = window._paq = window._paq || []  //eslint-disable-line
-let plugin: RunTab, dispatch: React.Dispatch<any>
+let plugin: RunTab, dispatch: React.Dispatch<any> = () => {}
 
-export const initRunTab = (udapp: RunTab) => async (reducerDispatch: React.Dispatch<any>) => {
+export const initRunTab = (udapp: RunTab, resetEventsAndAccounts: boolean) => async (reducerDispatch: React.Dispatch<any>) => {
   plugin = udapp
   dispatch = reducerDispatch
-  setupEvents(plugin, dispatch)  
-  resetAndInit(plugin)
+  setEventsDispatch(reducerDispatch)
+  if (resetEventsAndAccounts) {
+    setupEvents(plugin)
+    resetAndInit(plugin)
+  }
 }
 
+export const addFile = (path: string, content: string) => addFileInternal(plugin, path, content)
 export const setAccountAddress = (account: string) => setAccount(dispatch, account)
 export const setUnitValue = (unit: 'ether' | 'finney' | 'gwei' | 'wei') => setUnit(dispatch, unit)
 export const setGasFeeAmount = (value: number) => setGasFee(dispatch, value)
@@ -47,6 +51,8 @@ export const setGasPrice = (price: string) => updateGasPrice(dispatch, price)
 export const setGasPriceStatus = (status: boolean) => updateGasPriceStatus(dispatch, status)
 export const setMaxFee = (fee: string) => updateMaxFee(dispatch, fee)
 export const setMaxPriorityFee = (fee: string) => updateMaxPriorityFee(dispatch, fee)
+export const pinUnpinnedInstance = (index: number, pinnedAt: number, filePath: string) => pinInstance(dispatch, index, pinnedAt, filePath)
+export const unpinPinnedInstance = (index: number) => unpinInstance(dispatch, index)
 export const removeInstances = () => clearInstances(dispatch)
 export const removeSingleInstance = (index: number) => removeInstance(dispatch, index)
 export const getExecutionContext = () => getContext(plugin)
@@ -60,4 +66,4 @@ export const setNetworkName = (networkName: string) => setNetworkNameFromProvide
 export const updateSelectedContract = (contractName) => setSelectedContract(dispatch, contractName)
 export const syncContracts = () => syncContractsInternal(plugin)
 export const isValidProxyAddress = (address: string) => isValidContractAddress(plugin, address)
-export const isValidProxyUpgrade = (proxyAddress: string, contractName: string, solcInput: SolcInput, solcOuput: SolcOutput, solcVersion: string) => isValidContractUpgrade(plugin, proxyAddress, contractName, solcInput, solcOuput, solcVersion)
+export const isValidProxyUpgrade = (proxyAddress: string, contractName: string, solcInput: SolcInput, solcOutput: SolcOutput, solcVersion: string) => isValidContractUpgrade(plugin, proxyAddress, contractName, solcInput, solcOutput, solcVersion)

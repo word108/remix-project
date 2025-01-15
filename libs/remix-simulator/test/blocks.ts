@@ -1,5 +1,5 @@
 /* global describe, before, it */
-import Web3 from 'web3'
+import { Web3 } from 'web3'
 import { Provider } from '../src/index'
 const web3 = new Web3()
 import * as assert from 'assert'
@@ -63,6 +63,17 @@ describe('blocks', () => {
     })
   })
 
+  describe('evm_mine', () => {
+    it('should mine empty block using evm_mine', async function () {
+      await web3.provider.request({
+        method: 'evm_mine',
+        params: [{ blocks: 3 }],
+      })
+      const number = await web3.eth.getBlockNumber()
+      assert.equal(number, 3)
+    })
+  })
+
   describe('eth_getBlockByHash', () => {
     it('should get block given its hash', async () => {
       const correctBlock = await web3.eth.getBlock(0)
@@ -93,7 +104,7 @@ describe('blocks', () => {
     it('should get block given its hash', async () => {
       const correctBlock = await web3.eth.getBlock(0)
       const numberTransactions = await (new Promise((resolve, reject) => {
-        web3['_requestManager'].send({method: 'eth_getUncleCountByBlockHash', params: [correctBlock.hash]})
+        web3['_requestManager'].send({ method: 'eth_getUncleCountByBlockHash', params: [correctBlock.hash]})
           .then(numberTransactions => resolve(numberTransactions))
           .catch(err => reject(err))
       }))
@@ -105,7 +116,7 @@ describe('blocks', () => {
     it('should get block given its number', async () => {
       const correctBlock = await web3.eth.getBlock(0)
       const numberTransactions = await (new Promise((resolve, reject) => {
-        web3['_requestManager'].send({method: 'eth_getUncleCountByBlockHash', params: [0]})
+        web3['_requestManager'].send({ method: 'eth_getUncleCountByBlockHash', params: [0]})
           .then(numberTransactions => resolve(numberTransactions))
           .catch(err => reject(err))
       }))
@@ -201,7 +212,7 @@ describe('blocks', () => {
       const contract = new web3.eth.Contract(abi)
       const accounts = await web3.eth.getAccounts()
 
-      const contractInstance: any = await contract.deploy({ data: code, arguments: [100] }).send({ from: accounts[0], gas: '400000' })
+      const contractInstance: any = await contract.deploy({ data: code, arguments: [100]}).send({ from: accounts[0], gas: '400000' })
       contractInstance.currentProvider = web3.eth.currentProvider
       // contractInstance.givenProvider = web3.eth.currentProvider
 
@@ -307,7 +318,7 @@ describe('blocks', () => {
       const contract = new web3.eth.Contract(abi)
       const accounts = await web3.eth.getAccounts()
 
-      const contractInstance: any = await contract.deploy({ data: code, arguments: [100] }).send({ from: accounts[0], gas: '400000' })
+      const contractInstance: any = await contract.deploy({ data: code, arguments: [100]}).send({ from: accounts[0], gas: '400000' })
       contractInstance.currentProvider = web3.eth.currentProvider
 
       const value = await contractInstance.methods.get().call({ from: accounts[0] })

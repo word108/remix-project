@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, {useEffect, useRef, useContext} from 'react'
-import {FormattedMessage, useIntl} from 'react-intl'
+import React, { useEffect, useRef, useContext } from 'react'
+import { FormattedMessage, useIntl } from 'react-intl'
 import PluginButton from './pluginButton'
-import {ThemeContext} from '../themeContext'
+import { ThemeContext } from '../themeContext'
 import Carousel from 'react-multi-carousel'
 import 'react-multi-carousel/lib/styles.css'
 import CustomNavButtons from './customNavButtons'
@@ -17,7 +17,7 @@ interface HomeTabFeaturedPluginsProps {
   plugin: any
 }
 
-function HomeTabFeaturedPlugins({plugin}: HomeTabFeaturedPluginsProps) {
+function HomeTabFeaturedPlugins({ plugin }: HomeTabFeaturedPluginsProps) {
   const themeFilter = useContext(ThemeContext)
   const carouselRef = useRef<any>({})
   const carouselRefDiv = useRef(null)
@@ -67,10 +67,10 @@ function HomeTabFeaturedPlugins({plugin}: HomeTabFeaturedPluginsProps) {
     plugin.verticalIcons.select('solidityStaticAnalysis')
     _paq.push(['trackEvent', 'hometabActivate', 'userActivate', 'solidityStaticAnalysis'])
   }
-  const startSourceVerify = async () => {
-    await plugin.appManager.activatePlugin(['solidity', 'sourcify'])
-    plugin.verticalIcons.select('sourcify')
-    _paq.push(['trackEvent', 'hometabActivate', 'userActivate', 'sourcify'])
+  const startLearnEth = async () => {
+    await plugin.appManager.activatePlugin(['LearnEth', 'solidity', 'solidityUnitTesting'])
+    plugin.verticalIcons.select('LearnEth')
+    _paq.push(['trackEvent', 'hometabActivate', 'userActivate', 'LearnEth'])
   }
   const startCookbook = async () => {
     await plugin.appManager.activatePlugin(['cookbookdev'])
@@ -82,10 +82,15 @@ function HomeTabFeaturedPlugins({plugin}: HomeTabFeaturedPluginsProps) {
     plugin.verticalIcons.select('solidityUnitTesting')
     _paq.push(['trackEvent', 'hometabActivate', 'userActivate', 'solidityUnitTesting'])
   }
+  const startContractVerification = async () => {
+    await plugin.appManager.activatePlugin(['contract-verification'])
+    plugin.verticalIcons.select('contract-verification')
+    _paq.push(['trackEvent', 'hometabActivate', 'userActivate', 'contract-verification'])
+  }
 
   return (
-    <div className="pl-2 w-100" id="hTFeaturedPlugins">
-      <label className="" style={{fontSize: '1.2rem'}}>
+    <div className="pl-2 w-100 align-items-end remixui_featuredplugins_container" id="hTFeaturedPlugins">
+      <label className="" style={{ fontSize: '1.2rem' }}>
         <FormattedMessage id="home.featuredPlugins" />
       </label>
       <div ref={carouselRefDiv} className="w-100 d-flex flex-column">
@@ -100,21 +105,41 @@ function HomeTabFeaturedPlugins({plugin}: HomeTabFeaturedPluginsProps) {
             showDots={false}
             responsive={{
               superLargeDesktop: {
-                breakpoint: {max: 4000, min: 3000},
+                breakpoint: { max: 4000, min: 3000 },
                 items: itemsToShow
               },
               desktop: {
-                breakpoint: {max: 3000, min: 1024},
+                breakpoint: { max: 3000, min: 1024 },
                 items: itemsToShow
               }
             }}
             renderButtonGroupOutside={true}
-            ssr={true} // means to render carousel on server-side.
+            ssr={false} // means to render carousel on server-side.
             keyBoardControl={true}
             containerClass="carousel-container"
             deviceType={'desktop'}
             itemClass="w-100"
           >
+            <PluginButton
+              imgPath="assets/img/contractVerification.webp"
+              envID="contractVerificationLogo"
+              envText="Contract Verification"
+              description={intl.formatMessage({
+                id: 'home.contractVerificationDesc',
+              })}
+              maintainedBy="Remix"
+              callback={() => startContractVerification()}
+            />
+            <PluginButton
+              imgPath="assets/img/learnEthLogo.webp"
+              envID="learnEthLogo"
+              envText="LearnEth Tutorials"
+              description={intl.formatMessage({
+                id: 'home.learnEthPluginDesc'
+              })}
+              maintainedBy='Remix'
+              callback={() => startLearnEth()}
+            />
             <PluginButton
               imgPath="assets/img/staticAnalysis.webp"
               envID="staticAnalysisLogo"
@@ -122,38 +147,31 @@ function HomeTabFeaturedPlugins({plugin}: HomeTabFeaturedPluginsProps) {
               description={intl.formatMessage({
                 id: 'home.codeAnalyizerPluginDesc'
               })}
-              remixMaintained={true}
+              maintainedBy='Remix'
               callback={() => startCodeAnalyzer()}
             />
             <PluginButton
               imgPath="assets/img/cookbook.webp"
               envID="cookbookLogo"
               envText="Cookbook"
-              description={intl.formatMessage({id: 'home.cookbookDesc'})}
-              remixMaintained={false}
+              description={intl.formatMessage({ id: 'home.cookbookDesc' })}
+              maintainedBy="Cookbook"
               callback={() => startCookbook()}
             />
             <PluginButton
               imgPath="assets/img/solidityLogo.webp"
               envID="solidityLogo"
               envText="Solidity"
-              description={intl.formatMessage({id: 'home.solidityPluginDesc'})}
-              remixMaintained={true}
+              description={intl.formatMessage({ id: 'home.solidityPluginDesc' })}
+              maintainedBy='Remix'
               callback={() => startSolidity()}
-            />
-            <PluginButton
-              imgPath="assets/img/sourcifyNewLogo.webp"
-              envID="sourcifyLogo"
-              envText="Sourcify"
-              description={intl.formatMessage({id: 'home.sourcifyPluginDesc'})}
-              callback={() => startSourceVerify()}
             />
             <PluginButton
               imgPath="assets/img/unitTesting.webp"
               envID="sUTLogo"
               envText="Solidity unit testing"
-              description={intl.formatMessage({id: 'home.unitTestPluginDesc'})}
-              remixMaintained={true}
+              description={intl.formatMessage({ id: 'home.unitTestPluginDesc' })}
+              maintainedBy='Remix'
               callback={() => startSolidityUnitTesting()}
             />
           </Carousel>

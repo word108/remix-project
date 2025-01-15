@@ -10,7 +10,7 @@ import { InternalCallTree } from '../../../src/solidity-decoder/internalCallTree
 import * as vmCall from '../../vmCall'
 import { StorageResolver } from '../../../src/storage/storageResolver'
 import { StorageViewer } from '../../../src/storage/storageViewer'
-import {  Address, bufferToHex } from '@ethereumjs/util'
+import { Address, bytesToHex } from '@ethereumjs/util'
 
 module.exports = async function testMappingStorage (st, cb) {
   const mappingStorage = require('../contracts/mappingStorage')
@@ -23,17 +23,18 @@ module.exports = async function testMappingStorage (st, cb) {
   }
   const compilationResults = new CompilerAbstract('json', output, sources)
   const web3 = await (vmCall as any).getWeb3();
-  (vmCall as any).sendTx(web3, {nonce: 0, privateKey: privateKey}, undefined, 0, output.contracts['test.sol']['SimpleMappingState'].evm.bytecode.object, function (error, hash) {
+  (vmCall as any).sendTx(web3, { nonce: 0, privateKey: privateKey }, undefined, 0, output.contracts['test.sol']['SimpleMappingState'].evm.bytecode.object, function (error, hash) {
     if (error) {
       console.log(error)
       st.end(error)
     } else {
       web3.eth.getTransactionReceipt(hash)
-        .then(tx =>
+        .then(tx => {
           // const storage = await this.vm.stateManager.dumpStorage(data.to)
-          // (vmCall as any).web3().eth.getCode(tx.contractAddress).then((code) => console.log('code:', code))
+          // web3.eth.getCode(tx.contractAddress).then((code) => console.log('code:---', code))
           // (vmCall as any).web3().debug.traceTransaction(hash).then((code) => console.log('trace:', code))
           testMapping(st, privateKey, tx.contractAddress, output, compilationResults, web3, cb)
+        }
           // st.end()
         )
         .catch(error => {
@@ -44,7 +45,7 @@ module.exports = async function testMappingStorage (st, cb) {
 }
 
 function testMapping (st, privateKey, contractAddress, output, compilationResults, web3, cb) {
-  (vmCall as any).sendTx(web3, {nonce: 1, privateKey: privateKey}, contractAddress, 0, '2fd0a83a00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001074686973206973206120737472696e6700000000000000000000000000000000',
+  (vmCall as any).sendTx(web3, { nonce: 1, privateKey: privateKey }, contractAddress, 0, '2fd0a83a00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001074686973206973206120737472696e6700000000000000000000000000000000',
     function (error, hash) {
       if (error) {
         console.log(error)
@@ -71,10 +72,10 @@ function testMapping (st, privateKey, contractAddress, output, compilationResult
             })
             callTree.event.register('callTreeReady', (scopes, scopeStarts) => {
               const storageViewer = new StorageViewer({
-                stepIndex: 268,
+                stepIndex: 472,
                 tx: tx,
                 address: contractAddress
-              }, new StorageResolver({web3}), traceManager)
+              }, new StorageResolver({ web3 }), traceManager)
               const stateVars = stateDecoder.extractStateVariables('SimpleMappingState', output.sources)
               stateDecoder.decodeState(stateVars, storageViewer).then((result) => {
                 st.equal(result['_num'].value, '1')

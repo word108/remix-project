@@ -11,31 +11,31 @@ const sources = [
       content: `
       // SPDX-License-Identifier: MIT
       pragma solidity ^0.8.20;
-      
+
       import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
       import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
       import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
       import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-      
+
       contract MyToken is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
           /// @custom:oz-upgrades-unsafe-allow constructor
           constructor() {
               _disableInitializers();
           }
-      
+
           function initialize(address initialOwner) initializer public {
               __ERC721_init("MyToken", "MTK");
               __Ownable_init(initialOwner);
               __UUPSUpgradeable_init();
           }
-      
+
           function _authorizeUpgrade(address newImplementation)
               internal
               onlyOwner
               override
           {}
       }
-          
+
         `
     }
   }
@@ -70,7 +70,7 @@ module.exports = {
       .getEditorValue((content) => {
         browser.assert.ok(content && content.indexOf(
           'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol') !== -1,
-          'code has not been loaded')
+        'code has not been loaded')
       })
   },
 
@@ -87,7 +87,7 @@ module.exports = {
       .getEditorValue((content) => {
         browser.assert.ok(content && content.indexOf(
           'proposals.length = _numProposals;') !== -1,
-          'url has not been loaded')
+        'url has not been loaded')
       })
   },
 
@@ -95,16 +95,57 @@ module.exports = {
     browser
       .url('http://127.0.0.1:8080/#address=0xdac17f958d2ee523a2206206994597c13d831ec7')
       .refreshPage()
-      .pause(7000)
+      .pause(2000)
       .currentWorkspaceIs('code-sample')
       .waitForElementVisible('*[data-id=treeViewLitreeViewItemmainnet]')
       .waitForElementVisible('*[data-id="treeViewLitreeViewItemmainnet/0xdac17f958d2ee523a2206206994597c13d831ec7"]')
       .waitForElementVisible('*[data-id="treeViewLitreeViewItemmainnet/0xdac17f958d2ee523a2206206994597c13d831ec7/TetherToken.sol"]')
+      .click('*[data-id="treeViewLitreeViewItemmainnet/0xdac17f958d2ee523a2206206994597c13d831ec7/TetherToken.sol"]')
       .getEditorValue((content) => {
         browser.assert.ok(content && content.indexOf(
           'contract TetherToken is Pausable, StandardToken, BlackList {') !== -1)
 
       })
+  },
+
+  'Should load Blockscout verified contracts from URL "address" and "blockscout" params (single source)': ''+function (browser: NightwatchBrowser) {
+    browser
+      .url('http://127.0.0.1:8080/#address=0xdAC17F958D2ee523a2206206994597C13D831ec7&blockscout=eth.blockscout.com')
+      .refreshPage()
+      .pause(7000)
+      .currentWorkspaceIs('code-sample')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0xdAC17F958D2ee523a2206206994597C13D831ec7"]')
+      .getEditorValue((content) => {
+        browser.assert.ok(content && content.indexOf(
+          'contract TetherToken is Pausable, StandardToken, BlackList {') !== -1)
+
+      })
+  },
+  //Disabled due to failure from blockscout api
+  'Should load Blockscout verified contracts from URL "address" and "blockscout" params (multiple sources)': '' + function (browser: NightwatchBrowser) {
+    browser
+      .url('http://127.0.0.1:8080/#address=0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9&blockscout=eth.blockscout.com')
+      .refreshPage()
+      .pause(7000)
+      .currentWorkspaceIs('code-sample')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/Address.sol"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/BaseAdminUpgradeabilityProxy.sol"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/BaseUpgradeabilityProxy.sol"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/InitializableAdminUpgradeabilityProxy.sol"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/InitializableUpgradeabilityProxy.sol"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/Proxy.sol"]')
+      .assert.elementPresent('*[data-id="treeViewLitreeViewItemeth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/UpgradeabilityProxy.sol"]')
+      .openFile('eth.blockscout.com/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/contracts/open-zeppelin/InitializableAdminUpgradeabilityProxy.sol')
+      .getEditorValue((content) => {
+        browser.assert.ok(content && content.indexOf(
+          'contract InitializableAdminUpgradeabilityProxy is BaseAdminUpgradeabilityProxy, InitializableUpgradeabilityProxy {') !== -1)
+      })
+
   },
 
   'Should load the code from URL & code params #group1': function (browser: NightwatchBrowser) {
@@ -122,9 +163,10 @@ module.exports = {
       .getEditorValue((content) => {
         browser.assert.ok(content && content.indexOf(
           'proposals.length = _numProposals;') !== -1,
-          'code has been loaded')
+        'code has been loaded')
       })
       .url('http://127.0.0.1:8080') // refresh without loading the code sample
+      .pause(2000)
       .currentWorkspaceIs('default_workspace')
       .execute(() => {
         return document.querySelector('[data-id="dropdown-item-code-sample"]') === null
@@ -223,7 +265,7 @@ module.exports = {
         locateStrategy: 'xpath'
       })
       .assert.containsText('#evmVersionSelector option[data-id="selected"]', 'istanbul')
-      .assert.containsText('#compilierLanguageSelector option[data-id="selected"]', 'Yul')
+      .assert.containsText('#compilerLanguageSelector option[data-id="selected"]', 'Yul')
       .verify.elementPresent('#optimize:checked')
       .verify.elementPresent('#autoCompile:checked')
       .verify.attributeEquals('#runs', 'value', '300')
@@ -285,5 +327,30 @@ module.exports = {
       .waitForElementVisible('*[data-shared="tooltipPopup"]')
       .waitForElementContainsText('*[data-shared="tooltipPopup"]', 'initiating fileManager and calling "open" ...')
       .waitForElementContainsText('*[data-shared="tooltipPopup"]', 'initiating terminal and calling "log" ...')
-  }
+  },
+
+  'Import Github folder from URL params #group4': function (browser: NightwatchBrowser) {
+    browser
+      .url('http://127.0.0.1:8080/#ghfolder=https://github.com/ethereum/remix-project/tree/master/apps/remix-ide/contracts/hardhat')
+      .refreshPage()
+      .waitForElementVisible('*[data-id="treeViewLitreeViewItemcontracts"]', 40000)
+      .currentWorkspaceIs('code-sample')
+      .openFile('contracts')
+      .openFile('contracts/Lock.sol')
+      .getEditorValue((content) => {
+        browser.assert.ok(content.indexOf('contract Lock {') !== -1, 'content does contain "contract Lock {"')
+      })      
+  },
+
+  'Load remix with an iframe plugin #group4': function (browser: NightwatchBrowser) {
+    browser
+      .url('http://127.0.0.1:8080?activate=contract-verification')
+      .refreshPage()
+      .waitForElementVisible(
+        {
+          selector: '//*[contains(@data-id, "sidePanelSwapitTitle") and text()="Contract Verification"]',
+          locateStrategy: 'xpath'
+        }
+      )
+    }
 }

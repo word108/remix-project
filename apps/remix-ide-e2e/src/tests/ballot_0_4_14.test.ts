@@ -36,6 +36,7 @@ module.exports = {
     browser.pause(500)
       .clickLaunchIcon('udapp')
       .selectAccount('0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c')
+      .pause()
       .setValue('input[placeholder="uint8 _numProposals"]', '2')
       .click('*[data-id="Deploy - transact (not payable)"]')
       .waitForElementPresent('*[data-id="universalDappUiContractActionWrapper"]', 60000)
@@ -71,7 +72,7 @@ module.exports = {
         abortOnFailure: false,
         suppressNotFoundErrors: true,
       })
-      // we are not changing the visibility for not checksumed contracts
+      // we are not changing the visibility for not checksummed contracts
       // .addAtAddressInstance('0x692a70D2e424a56D2C6C27aA97D1a86395877b3B', true, false)
       .clickLaunchIcon('filePanel')
       .addAtAddressInstance('0x692a70D2e424a56D2C6C27aA97D1a86395877b3A', true, true)
@@ -94,7 +95,6 @@ module.exports = {
       .connectToExternalHttpProvider('http://localhost:8545', 'Custom')
       .clickLaunchIcon('solidity')
       .clickLaunchIcon('udapp')
-      .pause(2000)
       .clearValue('input[placeholder="uint8 _numProposals"]')
       .setValue('input[placeholder="uint8 _numProposals"]', '2')
       .click('*[data-id="Deploy - transact (not payable)"]')

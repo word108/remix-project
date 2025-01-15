@@ -1,12 +1,15 @@
-import React, { SyntheticEvent, useEffect, useRef, useState, RefObject, useMemo } from 'react'
+import React, { SyntheticEvent, useEffect, useRef, useState, RefObject, useMemo, useContext, Dispatch } from 'react'
 import { Popover } from 'react-bootstrap'
-import { FileType, WorkspaceElement } from '../types'
+import { DragStructure, FileType, WorkspaceElement } from '../types'
 import { getPathIcon } from '@remix-ui/helper';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'
 import { FlatTreeItemInput } from './flat-tree-item-input';
 import { FlatTreeDrop } from './flat-tree-drop';
 import { getEventTarget } from '../utils/getEventTarget';
 import { fileDecoration, FileDecorationIcons } from '@remix-ui/file-decorators';
+import { FileHoverIcons } from './file-explorer-hovericons';
+import { deletePath } from '../actions';
+import { FileSystemContext } from '../contexts';
 
 export default function useOnScreen(ref: RefObject<HTMLElement>) {
 
@@ -23,6 +26,8 @@ export default function useOnScreen(ref: RefObject<HTMLElement>) {
   return isIntersecting
 }
 interface FlatTreeProps {
+  fileTarget: any
+  setTargetFiles: React.Dispatch<any>
   files: { [x: string]: Record<string, FileType> },
   flatTree: FileType[],
   expandPath: string[],
@@ -33,9 +38,16 @@ interface FlatTreeProps {
   handleContextMenu: (pageX: number, pageY: number, path: string, content: string, type: string) => void
   handleTreeClick: (e: SyntheticEvent) => void
   handleClickFolder: (path: string, type: string) => void
-  moveFile: (dest: string, src: string) => void
-  moveFolder: (dest: string, src: string) => void
+  moveFolderSilently: (dest: string, src: string) => Promise<void>
+  moveFileSilently: (dest: string, src: string) => Promise<void>
+  resetMultiselect: () => void
+  setFilesSelected: Dispatch<React.SetStateAction<string[]>>
   fileState: fileDecoration[]
+  createNewFile?: any
+  createNewFolder?: any
+  deletePath?: (path: string | string[]) => void | Promise<void>
+  editPath?: (path: string, type: string, isNew?: boolean) => void
+  warnMovingItems: (srcs: string[], dests: string) => Promise<void>
 }
 
 let mouseTimer: any = {
@@ -44,7 +56,7 @@ let mouseTimer: any = {
 }
 
 export const FlatTree = (props: FlatTreeProps) => {
-  const { files, flatTree, expandPath, focusEdit, editModeOff, handleTreeClick, moveFile, moveFolder, fileState, focusElement, handleClickFolder } = props
+  const { files, flatTree, expandPath, focusEdit, editModeOff, handleTreeClick, warnMovingItems, fileState, focusElement, handleClickFolder, deletePath, moveFileSilently, moveFolderSilently, setFilesSelected } = props
   const [hover, setHover] = useState<string>('')
   const [mouseOverTarget, setMouseOverTarget] = useState<{
     path: string,
@@ -61,17 +73,55 @@ export const FlatTree = (props: FlatTreeProps) => {
   const ref = useRef(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const virtuoso = useRef<VirtuosoHandle>(null)
+  const [selectedItems, setSelectedItems] = useState<DragStructure[]>([])
+
+  /**
+   *  When multiple files are selected in FileExplorer,
+   *  and these files are dragged to a target folder,
+   *  this function will build the profile of each selected item
+   *  so they can be moved when dropped on target folder
+   * @param target - Initial target item in FileExplorer
+   * @returns - {DragStructure} Array of selected items
+   */
+  const buildMultiSelectedItemProfiles = (target: {
+    path: string
+    type: string
+    content: string
+    position: {
+        top: number
+        left: number
+    }
+    }) => {
+    const selectItems = []
+    selectItems.push(target)
+    containerRef.current?.querySelectorAll('li.remixui_selected').forEach(item => {
+      const dragTarget = {
+        position: { top: target?.position.top || 0, left: target?.position.left || 0 },
+        path: item.getAttribute('data-path') || item.getAttribute('data-label-path') || '',
+        type: item.getAttribute('data-type') || item.getAttribute('data-label-type') || '',
+        content: item.textContent || ''
+      }
+      if (dragTarget.path !== target.path) selectItems.push(dragTarget)
+    })
+    setSelectedItems(selectItems)
+  }
 
   const labelClass = (file: FileType) =>
     props.focusEdit.element === file.path
       ? 'bg-light'
       : props.focusElement.findIndex((item) => item.key === file.path) !== -1
-        ? 'bg-secondary'
+        ? 'bg-secondary remixui_selected'
         : hover == file.path
           ? 'bg-light border-no-shift'
           : props.focusContext.element === file.path && props.focusEdit.element !== file.path
             ? 'bg-light border-no-shift'
             : ''
+
+  useEffect(() => {
+    if (props.focusElement && props.focusElement.length > 0) {
+      props.setTargetFiles(props.focusElement)
+    }
+  }, [props.focusElement, props.focusElement.length])
 
   const getIndentLevelDiv = (path: string) => {
     // remove double slash
@@ -80,7 +130,7 @@ export const FlatTree = (props: FlatTreeProps) => {
     path = path.replace(/^\//g, '')
     const pathArray = path.split('/')
     const level = pathArray.length - 1
-    const indent = level * 4
+    const indent = level * 12
     return (<div style={{ paddingLeft: `${indent}px` }}></div>)
   }
 
@@ -97,6 +147,8 @@ export const FlatTree = (props: FlatTreeProps) => {
     const target = await getEventTarget(event)
     setDragSource(flatTree.find((item) => item.path === target.path))
     setIsDragging(true)
+    buildMultiSelectedItemProfiles(target)
+    setFilesSelected(selectedItems.map((item) => item.path))
   }
 
   useEffect(() => {
@@ -110,6 +162,12 @@ export const FlatTree = (props: FlatTreeProps) => {
 
   const onDragEnd = (event: SyntheticEvent) => {
     setIsDragging(false)
+    document.querySelectorAll('li.remixui_selected').forEach(item => {
+      item.classList.remove('remixui_selected')
+      item.classList.remove('bg-secondary')
+    })
+    props.setFilesSelected([])
+    setSelectedItems([])
   }
 
   const getFlatTreeItem = (path: string) => {
@@ -178,42 +236,62 @@ export const FlatTree = (props: FlatTreeProps) => {
     }
   }, [focusEdit])
 
+  const showIcons = (file: FileType) =>
+    file.path === hover && !isDragging ? (
+      <div>
+        <FileHoverIcons
+          file={file}
+          renamePathOp={props.editPath}
+          deletePathOp={deletePath}
+          handleNewFileOp={props.createNewFile}
+          handleNewFolderOp={props.createNewFolder}
+        />
+      </div>
+    ) : null
 
   const Row = (index: number) => {
     const node = Object.keys(flatTree)[index]
     const file = flatTree[node]
-    return (<li
-      className={`${labelClass(file)} li_tv`}
-      onMouseOver={() => setHover(file.path)}
-      onMouseOut={() => setHover(file.path)}
-      data-type={file.isDirectory ? 'folder' : 'file'}
-      data-path={`${file.path}`}
-      data-id={`treeViewLitreeViewItem${file.path}`}
-    >
-      <div data-id={`treeViewDivtreeViewItem${file.path}`} className={`d-flex flex-row align-items-center`}>
-        {getIndentLevelDiv(file.path)}
+    return (
+      <li
+        className={`${labelClass(file)} li_tv`}
+        onMouseOver={(e) => {
+          setHover(file.path)
+        }}
+        onMouseOut={() => {
+          setHover('')
+        }}
+        data-type={file.isDirectory ? 'folder' : 'file'}
+        data-path={`${file.path}`}
+        data-id={`treeViewLitreeViewItem${file.path}`}
+      >
+        <div data-id={`treeViewDivtreeViewItem${file.path}`} className={`d-flex flex-row align-items-center`}>
+          {getIndentLevelDiv(file.path)}
 
-        <div className={`pl-2 ${file.isDirectory ? expandPath && expandPath.includes(file.path) ? 'fa fa-folder-open' : 'fa fa-folder' : `${getPathIcon(file.path)} pr-2 caret caret_tv`} `}></div>
-        {focusEdit && file.path && focusEdit.element === file.path ?
-          <FlatTreeItemInput
-            editModeOff={editModeOff}
-            file={file} /> :
-          <><div
-            draggable={true}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            className={`ml-1 pl-2 text-nowrap remixui_leaf ${getFileStateClasses(file)}`}
-            data-label-type={file.isDirectory ? 'folder' : 'file'}
-            data-label-path={`${file.path}`}
-            key={index}>
-            {file.name}
-
-          </div>
-          {getFileStateIcons(file)}
-          </>
-        }
-      </div>
-    </li>)
+          <div className={`pl-2 ${file.isDirectory ? expandPath && expandPath.includes(file.path) ? 'fa fa-folder-open' : 'fa fa-folder' : `${getPathIcon(file.path)} pr-2 caret caret_tv`} `}></div>
+          {focusEdit && file.path && focusEdit.element === file.path ?
+            <FlatTreeItemInput
+              editModeOff={editModeOff}
+              file={file} /> :
+            <><div
+              data-id={`treeViewDivDraggableItem${file.path}`}
+              draggable={true}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              className={`ml-1 pl-2 text-nowrap remixui_leaf ${getFileStateClasses(file)}`}
+              data-label-type={file.isDirectory ? 'folder' : 'file'}
+              data-label-path={`${file.path}`}
+              key={index}>
+              {file.name}
+            </div>
+            <div className="d-flex flex-row align-items-center">
+              {showIcons(file)}
+              {getFileStateIcons(file)}
+            </div>
+            </>
+          }
+        </div>
+      </li>)
   }
 
   return (<>
@@ -221,17 +299,23 @@ export const FlatTree = (props: FlatTreeProps) => {
       <FlatTreeDrop
         dragSource={dragSource}
         getFlatTreeItem={getFlatTreeItem}
-        moveFile={moveFile}
-        moveFolder={moveFolder}
+        warnMovingItems={warnMovingItems}
+        moveFolderSilently={moveFolderSilently}
+        moveFileSilently={moveFileSilently}
+        resetMultiselect={props.resetMultiselect}
+        setFilesSelected={setFilesSelected}
         handleClickFolder={handleClickFolder}
         expandPath={expandPath}
+        selectedItems={selectedItems}
+        setSelectedItems={setSelectedItems}
       >
         <div data-id="treeViewUltreeViewMenu"
           className='d-flex h-100 w-100 pb-2'
           onClick={handleTreeClick}
           onMouseLeave={onMouseLeave}
           onMouseMove={onMouseMove}
-          onContextMenu={handleContextMenu}>
+          onContextMenu={handleContextMenu}
+        >
           { showMouseOverTarget && mouseOverTarget && !isDragging &&
             <Popover id='popover-basic'
               placement='top'

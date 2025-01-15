@@ -1,18 +1,18 @@
 import { appPlatformTypes } from '@remix-ui/app'
 import { FileType } from '@remix-ui/file-decorators'
-import { WorkspaceProps, MenuItems } from '../types'
+import { MenuItems } from '../types'
 
 export const contextMenuActions: MenuItems = [{
   id: 'newFile',
   name: 'New File',
-  type: ['folder', 'gist', 'workspace'],
+  type: ['folder', 'workspace'],
   multiselect: false,
   label: '',
   group: 0
 }, {
   id: 'newFolder',
   name: 'New Folder',
-  type: ['folder', 'gist', 'workspace'],
+  type: ['folder', 'workspace'],
   multiselect: false,
   label: '',
   group: 0
@@ -26,7 +26,7 @@ export const contextMenuActions: MenuItems = [{
 }, {
   id: 'delete',
   name: 'Delete',
-  type: ['file', 'folder', 'gist'],
+  type: ['file', 'folder'],
   multiselect: false,
   label: '',
   group: 0
@@ -81,13 +81,12 @@ export const contextMenuActions: MenuItems = [{
   label: '',
   group: 3
 }, {
-  id: 'pushChangesToGist',
-  name: 'Push changes to gist',
-  type: ['gist'],
+  id: 'signTypedData',
+  name: 'Sign Typed Data',
+  extension: ['.json'],
   multiselect: false,
   label: '',
-  group: 4,
-  platform: appPlatformTypes.web
+  group: 3
 }, {
   id: 'publishFolderToGist',
   name: 'Publish folder to gist',
@@ -105,23 +104,23 @@ export const contextMenuActions: MenuItems = [{
   group: 4,
   platform: appPlatformTypes.web
 }, {
+  id: 'publishFilesToGist',
+  name: 'Publish files to gist',
+  type: ['file'],
+  multiselect: true,
+  label: '',
+  group: 4,
+  platform: appPlatformTypes.web
+}
+, {
   id: 'uploadFile',
   name: 'Load a Local File',
-  type: ['folder', 'gist', 'workspace'],
+  type: ['folder', 'workspace'],
   multiselect: false,
   label: 'Load a Local File',
   group: 4,
   platform: appPlatformTypes.web
-}, {
-  id: 'publishToGist',
-  name: 'Push changes to gist',
-  type: ['folder', 'gist'],
-  multiselect: false,
-  label: 'Publish all to Gist',
-  group: 4,
-  platform: appPlatformTypes.web
-},
-{
+},{
   id: 'publishWorkspace',
   name: 'Publish Workspace to Gist',
   type: ['workspace'],

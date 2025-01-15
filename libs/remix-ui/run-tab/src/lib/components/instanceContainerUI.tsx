@@ -1,38 +1,43 @@
 // eslint-disable-next-line no-use-before-define
 import { CustomTooltip } from '@remix-ui/helper'
-import React from 'react'
-import { FormattedMessage, useIntl } from 'react-intl'
+import React, { useEffect, useRef } from 'react'
+import { FormattedMessage } from 'react-intl'
 import { InstanceContainerProps } from '../types'
 import { UniversalDappUI } from './universalDappUI'
 
 export function InstanceContainerUI(props: InstanceContainerProps) {
   const { instanceList } = props.instances
 
-  const clearInstance = () => {
+  const clearInstance = async() => {
+    const isPinnedAvailable = await props.plugin.call('fileManager', 'exists', `.deploys/pinned-contracts/${props.plugin.REACT_API.chainId}`)
+    if (isPinnedAvailable) await props.plugin.call('fileManager', 'remove', `.deploys/pinned-contracts/${props.plugin.REACT_API.chainId}`)
     props.clearInstances()
   }
 
-  const intl = useIntl()
-
   return (
-    <div className="udapp_instanceContainer mt-3 border-0 list-group-item">
-      <div className="d-flex justify-content-between align-items-center pl-2 mb-2">
+    <div className="udapp_instanceContainer mt-2 border-0 list-group-item">
+      <div className="d-flex justify-content-between align-items-center p-2">
         <CustomTooltip placement="top-start" tooltipClasses="text-nowrap" tooltipId="deployAndRunClearInstancesTooltip" tooltipText={<FormattedMessage id="udapp.tooltipText6" />}>
-          <label className="udapp_deployedContracts">
+          <label className="udapp_deployedContracts text-nowrap" data-id="deployedContracts">
             <FormattedMessage id="udapp.deployedContracts" />
           </label>
         </CustomTooltip>
+        <CustomTooltip placement="top-start" tooltipClasses="text-nowrap" tooltipId="numOfDeployedInstancesTooltip" tooltipText="Number of deployed contracts">
+          <div className="badge badge-pill badge-primary text-center ml-2 mb-1" data-id="deployedContractsBadge">{instanceList.length}</div>
+        </CustomTooltip>
+        <div className="w-100"></div>
         {instanceList.length > 0 ? (
           <CustomTooltip
-            placement="right"
+            placement={'auto-end'}
             tooltipClasses="text-nowrap"
             tooltipId="deployAndRunClearInstancesTooltip"
             tooltipText={<FormattedMessage id="udapp.deployAndRunClearInstances" />}
           >
-            <i className="mr-1 udapp_icon far fa-trash-alt" data-id="deployAndRunClearInstances" onClick={clearInstance} aria-hidden="true"></i>
+            <i className="far fa-trash-alt udapp_icon mr-1 mb-2" data-id="deployAndRunClearInstances" onClick={clearInstance} aria-hidden="true"></i>
           </CustomTooltip>
         ) : null}
       </div>
+
       {instanceList.length > 0 ? (
         <div>
           {' '}
@@ -42,6 +47,8 @@ export function InstanceContainerUI(props: InstanceContainerProps) {
                 key={index}
                 instance={instance}
                 context={props.getContext()}
+                pinInstance={props.pinInstance}
+                unpinInstance={props.unpinInstance}
                 removeInstance={props.removeInstance}
                 index={index}
                 gasEstimationPrompt={props.gasEstimationPrompt}
@@ -50,15 +57,19 @@ export function InstanceContainerUI(props: InstanceContainerProps) {
                 runTransactions={props.runTransactions}
                 sendValue={props.sendValue}
                 getFuncABIInputs={props.getFuncABIInputs}
+                plugin={props.plugin}
+                exEnvironment={props.exEnvironment}
+                editInstance={props.editInstance}
+                solcVersion={props.solcVersion}
+                getVersion={props.getVersion}
+                getCompilerDetails={props.getCompilerDetails}
+                runTabState={props.runTabState}
+                evmCheckComplete={props.evmCheckComplete}
               />
             )
           })}
         </div>
-      ) : (
-        <span className="mx-2 mt-3 alert alert-warning" data-id="deployAndRunNoInstanceText" role="alert">
-          <FormattedMessage id="udapp.deployAndRunNoInstanceText" />
-        </span>
-      )}
+      ) : ''}
     </div>
   )
 }

@@ -10,12 +10,14 @@ const _paq = (window._paq = window._paq || [])
 export interface VyperCompilationResult {
   status?: 'success'
   bytecode: string
-  bytecodeRuntime: string
+  bytecodeRuntime: string | 'bytecode_runtime'
   abi: ABIDescription[]
   ir: string
   methodIdentifiers: {
     [method: string]: string
   }
+  compilerVersion: string
+  evmVersion: string
 }
 
 export interface VyperCompileProps {
@@ -24,16 +26,27 @@ export interface VyperCompileProps {
   themeStyle?: any
 }
 
-export default function VyperCompile({result, theme, themeStyle}: VyperCompileProps) {
+type tabContentType = {
+  tabHeadingText: string
+  tabPayload: string | ABIDescription[]
+  tabMemberType: keyof VyperCompilationResult | string
+  tabButtonText: () => string
+  eventKey: string
+  version?: string
+  evmVersion?: string
+}
 
+export default function VyperCompile({ result, theme, themeStyle }: VyperCompileProps) {
   const [active, setActive] = useState<keyof VyperCompilationResult>('abi')
-  const tabContent = [
+  const tabContent: tabContentType[] = [
     {
       tabHeadingText: 'ABI',
       tabPayload: result.abi,
       tabMemberType: 'abi',
       tabButtonText: () => 'Copy ABI',
-      eventKey: 'abi'
+      eventKey: 'abi',
+      version: result.compilerVersion,
+      evmVersion: result.evmVersion
     },
     {
       tabHeadingText: 'Bytecode',
@@ -52,15 +65,14 @@ export default function VyperCompile({result, theme, themeStyle}: VyperCompilePr
   ]
 
   return (
-    <>
-      <Tabs id="result" activeKey={active} onSelect={(key: any) => setActive(key)} justify>
+    <div className='w-100 h-100 d-flex flex-row'>
+      <Tabs className="flex-column" style={{ height: "fit-content", backgroundColor: 'var(--body-bg)' }} id="result" activeKey={active} onSelect={(key: any) => setActive(key)}>
         {tabContent.map((content, index) => (
-          <Tab eventKey={content.eventKey} title={content.tabHeadingText} as={'span'} key={`${index}-${content.eventKey}`}>
-            <div className="d-flex flex-column w-75 justify-content-center mx-auto rounded-2">
+          <Tab className="border-top border-left p-4 bg-light" style={{ width: '50rem', height: 'fit-content', minHeight: '25rem' }} eventKey={content.eventKey} title={content.tabHeadingText} as={'span'} key={`${index}-${content.eventKey}`}>
+            <div className="d-flex flex-column w-90 justify-content-center mx-auto rounded-2">
               <CopyToClipboard getContent={() => (content.eventKey !== 'abi' ? content.tabPayload : JSON.stringify(result['abi']))}>
                 <Button
-                  variant="info"
-                  className="copy mt-3 ml-2"
+                  className="copy ml-2 btn btn-sm btn-secondary"
                   data-id={content.eventKey === 'abi' ? 'copy-abi' : ''}
                 >
                   <span className="far fa-copy mr-2"></span>
@@ -70,7 +82,7 @@ export default function VyperCompile({result, theme, themeStyle}: VyperCompilePr
               {content.eventKey === 'abi' ? (
                 <div className="my-3">
                   {JSON.stringify(content?.tabPayload)?.length > 1 ? <JSONTree
-                    src={content.tabPayload as ABIDescription[]}
+                    src={{ ...content.tabPayload as ABIDescription[], evmVersion: content.evmVersion, version: content.version } }
                     theme={theme}
                     style={themeStyle}
                   /> : null}
@@ -84,6 +96,6 @@ export default function VyperCompile({result, theme, themeStyle}: VyperCompilePr
           </Tab>
         ))}
       </Tabs>
-    </>
+    </div>
   )
 }

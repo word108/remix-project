@@ -9,7 +9,7 @@ import { filePathFilter, AnyFilter } from '@jsdevtools/file-path-filter'
 
 const profile = {
   name: 'codeFormatter',
-  desciption: 'prettier plugin for Remix',
+  description: 'prettier plugin for Remix',
   methods: ['format'],
   events: [''],
   version: '0.0.1'
@@ -210,8 +210,6 @@ export class CodeFormat extends Plugin {
         this.call('notification', 'toast', `Error parsing prettier config file: ${prettierConfigFile}`)
       }
 
-
-
       // merge options
       if (parsed) {
         options = {
@@ -250,7 +248,6 @@ export class CodeFormat extends Plugin {
           }
         }
       }
-
 
       const result = this.prettier.format(content, {
         plugins: [sol as any, this.ts, this.babel, this.espree, this.yml],

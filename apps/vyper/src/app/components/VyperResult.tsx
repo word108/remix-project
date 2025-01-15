@@ -1,14 +1,19 @@
 import React, {useState} from 'react'
-import {VyperCompilationOutput, isCompilationError} from '../utils'
-import Tabs from 'react-bootstrap/Tabs'
-import Tab from 'react-bootstrap/Tab'
-import Button from 'react-bootstrap/Button'
+import {isCompilationError} from '../utils'
 import {CopyToClipboard} from '@remix-ui/clipboard'
-import { VyperCompilationResult } from '../utils/types'
 
 interface VyperResultProps {
   output?: any
   plugin?: any
+}
+
+export type OutputType = {
+  contractName: string
+  abi: any
+  bytecode: any
+  runtimeBytecode: any
+  ir: string
+  methodIdentifiers: any
 }
 
 export type ExampleContract = {
@@ -24,7 +29,6 @@ type TabContentMembers = {
 }
 
 function VyperResult({ output, plugin }: VyperResultProps) {
-  // const [active, setActive] = useState<keyof VyperCompilationResult>('abi')
 
   if (!output)
     return (
@@ -51,15 +55,36 @@ function VyperResult({ output, plugin }: VyperResultProps) {
       </div>
     )
   }
+
   return (
     <>
-      <div className="border border-top"></div>
-      <div className="d-flex justify-content-center px-2 w-100">
-        <button data-id="compilation-details" className="btn btn-secondary w-100" onClick={async () => {
+      <div className="d-flex justify-content-center w-100 mb-3 mt-1 vyper-panel-width flex-column">
+        <button data-id="compilation-details" className="remixui_resultsBtn text-dark border btn d-block btn-block" onClick={async () => {
           await plugin?.call('vyperCompilationDetails', 'showDetails', output)
         }}>
-          <span>Compilation Details</span>
+          <span>
+            <i className="fa-regular fa-memo-pad mr-2 text-primary"></i>
+            <span>Compilation Details</span>
+          </span>
         </button>
+        <div className="mt-1">
+          <div className="input-group input-group d-flex flex-row-reverse">
+            <div className="btn-group align-self-start" role="group" aria-label="Copy to Clipboard">
+              <CopyToClipboard tip={'Copy ABI to clipboard'} getContent={() => (Object.values(output)[1] as OutputType)?.abi} direction="bottom" icon="far fa-copy">
+                <span className="btn remixui_copyButton">
+                  <i className="remixui_copyIcon far fa-copy" aria-hidden="true"></i>
+                  <span>ABI</span>
+                </span>
+              </CopyToClipboard>
+              <CopyToClipboard tip={'Copy Bytecode to clipboard'} getContent={() => (Object.values(output)[1] as OutputType)?.bytecode.object} direction="bottom" icon="far fa-copy">
+                <span className="btn remixui_copyButton">
+                  <i className="remixui_copyIcon far fa-copy" aria-hidden="true"></i>
+                  <span>Bytecode</span>
+                </span>
+              </CopyToClipboard>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   )

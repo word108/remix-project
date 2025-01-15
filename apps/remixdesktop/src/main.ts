@@ -1,9 +1,23 @@
-import { app, BrowserWindow, dialog, Menu, MenuItem, shell, utilityProcess } from 'electron';
+import { app, BrowserWindow, dialog, Menu, MenuItem, shell, utilityProcess, screen, ipcMain } from 'electron';
 import path from 'path';
 
 
 export let isPackaged = false;
 export const version = app.getVersion();
+
+const args = process.argv.slice(1)
+console.log("args", args)
+export const isE2ELocal = args.find(arg => arg.startsWith('--e2e-local'))
+export const isE2E = args.find(arg => arg.startsWith('--e2e'))
+
+if (isE2ELocal) {
+  console.log('e2e mode')
+}
+const cache_dir_arg = args.find(arg => arg.startsWith('--cache_dir='))
+export let cache_dir = ''
+if (cache_dir_arg) {
+  cache_dir = cache_dir_arg.split('=')[1]
+}
 
 if (
   process.mainModule &&
@@ -17,14 +31,26 @@ if (
 // get system home dir
 const homeDir = app.getPath('userData')
 
+
 const windowSet = new Set<BrowserWindow>([]);
 export const createWindow = async (dir?: string): Promise<void> => {
+  // reize factor
+  let resizeFactor = 0.8
+  // if the window is too small the size is 100%
+  if( screen.getPrimaryDisplay().size.width < 2560 || screen.getPrimaryDisplay().size.height < 1440) {
+    resizeFactor = 1
+  }
+  const width = screen.getPrimaryDisplay().size.width * resizeFactor
+  const height = screen.getPrimaryDisplay().size.height * resizeFactor
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    height: 800,
-    width: 1024,
+    width: (isE2E ? 2560 : width),
+    height: (isE2E ? 1140 : height),
+    frame: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
+
     },
   });
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -35,10 +61,10 @@ export const createWindow = async (dir?: string): Promise<void> => {
   const params = dir ? `?opendir=${encodeURIComponent(dir)}` : '';
   // and load the index.html of the app.
   mainWindow.loadURL(
-    process.env.NODE_ENV === 'production' || isPackaged ? `file://${__dirname}/remix-ide/index.html` + params :
+    (process.env.NODE_ENV === 'production' || isPackaged) && !isE2ELocal ? `file://${__dirname}/remix-ide/index.html` + params :
       'http://localhost:8080' + params)
 
-  mainWindow.maximize();
+  trackEvent('Instance', 'create_window', '', 1);
 
   if (dir) {
     mainWindow.setTitle(dir)
@@ -49,6 +75,9 @@ export const createWindow = async (dir?: string): Promise<void> => {
     windowSet.delete(mainWindow)
   })
 
+  if (isE2E)
+    mainWindow.maximize()
+
   windowSet.add(mainWindow)
   //mainWindow.webContents.openDevTools();
 };
@@ -57,6 +86,8 @@ export const createWindow = async (dir?: string): Promise<void> => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
+  trackEvent('App', 'Launch', app.getVersion(), 1, 1);
+  trackEvent('App', 'OS', process.platform, 1);
   require('./engine')
 });
 
@@ -78,12 +109,10 @@ app.on('activate', () => {
 });
 
 const showAbout = () => {
-
-
   void dialog.showMessageBox({
     title: `About Remix`,
-    message: `Remix`,
-    detail: `Remix`,
+    message: `The Native IDE for Web3 Development.`,
+    detail: `Remix Desktop version ${app.getVersion()}`,
     buttons: [],
   });
 };
@@ -102,6 +131,8 @@ import ViewMenu from './menus/view';
 import TerminalMenu from './menus/terminal';
 import HelpMenu from './menus/help';
 import { execCommand } from './menus/commands';
+import main from './menus/main';
+import { trackEvent } from './utils/matamo';
 
 
 const commandKeys: Record<string, string> = {
@@ -110,16 +141,39 @@ const commandKeys: Record<string, string> = {
 };
 
 const menu = [...(process.platform === 'darwin' ? [darwinMenu(commandKeys, execCommand, showAbout)] : []),
-  FileMenu(commandKeys, execCommand),
-  GitMenu(commandKeys, execCommand),
-  EditMenu(commandKeys, execCommand),
-  ViewMenu(commandKeys, execCommand),
-  TerminalMenu(commandKeys, execCommand),
-  WindowMenu(commandKeys, execCommand, []),
-  HelpMenu(commandKeys, execCommand),
+FileMenu(commandKeys, execCommand),
+GitMenu(commandKeys, execCommand),
+EditMenu(commandKeys, execCommand),
+ViewMenu(commandKeys, execCommand),
+TerminalMenu(commandKeys, execCommand),
+WindowMenu(commandKeys, execCommand, []),
+HelpMenu(commandKeys, execCommand),
 ]
+if (!isE2E || isE2ELocal)
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menu))
 
-Menu.setApplicationMenu(Menu.buildFromTemplate(menu))
+ipcMain.handle('logger', async (...args) => {
+  console.log('log:', ...args)
+})
+
+ipcMain.handle('config:isPackaged', async () => {
+  return isPackaged
+})
+
+ipcMain.handle('config:isE2E', async () => {
+  return isE2E
+})
+
+ipcMain.handle('config:canTrackMatomo', async (event, name: string) => {
+  console.log('config:canTrackMatomo', ((process.env.NODE_ENV === 'production' || isPackaged) && !isE2E))
+  return ((process.env.NODE_ENV === 'production' || isPackaged) && !isE2E)
+})
+
+ipcMain.handle('matomo:trackEvent', async (event, data) => {
+  if (data && data[0] && data[0] === 'trackEvent') {
+    trackEvent(data[1], data[2], data[3], data[4])
+  }
+})
 
 
 

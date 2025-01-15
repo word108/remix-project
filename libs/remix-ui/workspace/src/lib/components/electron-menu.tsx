@@ -5,8 +5,6 @@ import { FormattedMessage } from "react-intl"
 import '../css/electron-menu.css'
 import { CustomTooltip } from '@remix-ui/helper'
 
-
-
 export const ElectronMenu = () => {
   const platform = useContext(platformContext)
   const global = useContext(FileSystemContext)
@@ -30,7 +28,7 @@ export const ElectronMenu = () => {
     (platform !== appPlatformTypes.desktop) ? null :
       (global.fs.browser.isSuccessfulWorkspace ? null :
         <>
-          <div onClick={async () => { await openFolderElectron(null) }} className='btn btn-primary'><FormattedMessage id="electron.openFolder" /></div>
+          <div data-id="openFolderButton" onClick={async () => { await openFolderElectron(null) }} className='btn btn-primary'><FormattedMessage id="electron.openFolder" /></div>
           {global.fs.browser.recentFolders.length > 0 ?
             <>
               <label className="py-2 pt-3 align-self-center m-0">
@@ -46,7 +44,7 @@ export const ElectronMenu = () => {
                     >
                       <div className="recentfolder pb-1">
                         <span onClick={async () => { await openFolderElectron(folder) }} className="pl-2 recentfolder_name pr-2">{lastFolderName(folder)}</span>
-                        <span onClick={async () => { await openFolderElectron(folder) }} data-id={{ folder }} className="recentfolder_path pr-2">{folder}</span>
+                        <span onClick={async () => { await openFolderElectron(folder) }} data-id={`recent_folder_${folder}`} className="recentfolder_path pr-2">{folder}</span>
                         <i
                           onClick={() => {
                             global.dispatchRemoveRecentFolder(folder)

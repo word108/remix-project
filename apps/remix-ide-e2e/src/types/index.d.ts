@@ -11,7 +11,7 @@ declare module 'nightwatch' {
     scrollInto(target: string): NightwatchBrowser
     testContracts(fileName: string, contractCode: NightwatchContractContent, compiledContractNames: string[]): NightwatchBrowser
     setEditorValue(value: string, callback?: () => void): NightwatchBrowser
-    addFile(name: string, content: NightwatchContractContent): NightwatchBrowser
+    addFile(name: string, content: NightwatchContractContent, readMeFile?: string): NightwatchBrowser
     verifyContracts(compiledContractNames: string[], opts?: {wait: number; version?: string; runs?: string}): NightwatchBrowser
     selectAccount(account?: string): NightwatchBrowser
     clickFunction(fnFullName: string, expectedInput?: NightwatchClickFunctionExpectedInput): NightwatchBrowser
@@ -25,7 +25,7 @@ declare module 'nightwatch' {
     journalLastChildIncludes(val: string): NightwatchBrowser
     executeScriptInTerminal(script: string): NightwatchBrowser
     clearEditableContent(cssSelector: string): NightwatchBrowser
-    journalChildIncludes(val: string, opts = {shouldHaveOnlyOneOccurence: boolean}): NightwatchBrowser
+    journalChildIncludes(val: string, opts = {shouldHaveOnlyOneOccurrence: boolean}): NightwatchBrowser
     debugTransaction(index: number): NightwatchBrowser
     checkElementStyle(cssSelector: string, styleProperty: string, expectedResult: string): NightwatchBrowser
     openFile(name: string): NightwatchBrowser
@@ -48,15 +48,16 @@ declare module 'nightwatch' {
     removeFile(path: string, workspace: string): NightwatchBrowser
     switchBrowserWindow(url: string, windowName: string, cb: (browser: NightwatchBrowser, window?: NightwatchCallbackResult<Window>) => void): NightwatchBrowser
     setupMetamask(passphrase: string, password: string): NightwatchBrowser
+    hideMetaMaskPopup(): NightwatchBrowser
     signMessage(msg: string, callback: (hash: {value: string}, signature: {value: string}) => void): NightwatchBrowser
     setSolidityCompilerVersion(version: string): NightwatchBrowser
     clickElementAtPosition(cssSelector: string, index: number, opt?: {forceSelectIfUnselected: boolean}): NightwatchBrowser
     notContainsText(cssSelector: string, text: string): NightwatchBrowser
     sendLowLevelTx(address: string, value: string, callData: string): NightwatchBrowser
     journalLastChild(val: string): NightwatchBrowser
-    checkTerminalFilter(filter: string, test: string): NightwatchBrowser
+    checkTerminalFilter(filter: string, test: string, notContain: boolean): NightwatchBrowser
     noWorkerErrorFor(version: string): NightwatchBrowser
-    validateValueInput(selector: string, valueTosSet: string[], expectedValue: string): NightwatchBrowser
+    validateValueInput(selector: string, valueToSet: string[], expectedValue: string): NightwatchBrowser
     checkAnnotations(type: string): NightwatchBrowser
     checkAnnotationsNotPresent(type: string): NightwatchBrowser
     getLastTransactionHash(callback: (hash: string) => void)
@@ -69,10 +70,14 @@ declare module 'nightwatch' {
     currentSelectedFileIs(name: string): NightwatchBrowser
     switchWorkspace: (workspaceName: string) => NightwatchBrowser
     switchEnvironment: (provider: string) => NightwatchBrowser
+    pinGrid: (provider: string, status: boolean) => NightwatchBrowser
     connectToExternalHttpProvider: (url: string, identifier: string) => NightwatchBrowser
     waitForElementNotContainsText: (id: string, value: string, timeout: number = 10000) => NightwatchBrowser
     hideToolTips: (this: NightwatchBrowser) => NightwatchBrowser
+    hidePopupPanel: (this: NightwatchBrowser) => NightwatchBrowser
     enableClipBoard: () => NightwatchBrowser
+    addFileSnekmate: (name: string, content: NightwatchContractContent) => NightwatchBrowser
+    selectFiles: (selelectedElements: any[]) => NightwatchBrowser
   }
 
   export interface NightwatchBrowser {
