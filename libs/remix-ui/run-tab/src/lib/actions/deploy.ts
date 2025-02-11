@@ -6,10 +6,10 @@ import { SolcInput, SolcOutput } from "@openzeppelin/upgrades-core"
 // Used direct path to UpgradeableContract class to fix cyclic dependency error from @openzeppelin/upgrades-core library
 import { UpgradeableContract } from '../../../../../../node_modules/@openzeppelin/upgrades-core/dist/standalone'
 import { DeployMode, MainnetPrompt } from "../types"
-import { displayNotification, displayPopUp, fetchProxyDeploymentsSuccess, setDecodedResponse, updateInstancesBalance } from "./payload"
+import { displayNotification, fetchProxyDeploymentsSuccess, setDecodedResponse, updateInstancesBalance } from "./payload"
 import { addInstance } from "./actions"
 import { addressToString, logBuilder } from "@remix-ui/helper"
-import Web3 from "web3"
+import { Web3 } from "web3"
 
 declare global {
   interface Window {
@@ -22,11 +22,12 @@ const txHelper = remixLib.execution.txHelper
 const txFormat = remixLib.execution.txFormat
 
 const loadContractFromAddress = (plugin: RunTab, address, confirmCb, cb) => {
-  if (/.(.abi)$/.exec(plugin.config.get('currentFile'))) {
+  if (/\.(abi)$/.exec(plugin.config.get('currentFile'))) {
     confirmCb(() => {
       let abi
       try {
         abi = JSON.parse(plugin.editor.currentContent())
+        if (!Array.isArray(abi)) return cb('ABI should be an array object.')
       } catch (e) {
         return cb('Failed to parse the current file as JSON ABI.')
       }
@@ -41,7 +42,7 @@ const loadContractFromAddress = (plugin: RunTab, address, confirmCb, cb) => {
 
 export const getSelectedContract = (contractName: string, compiler: CompilerAbstractType): ContractData => {
   if (!contractName) return null
-  // const compiler = plugin.compilersArtefacts[compilerAtributeName]
+  // const compiler = plugin.compilersArtefacts[compilerAttributeName]
 
   if (!compiler) return null
 
@@ -60,9 +61,9 @@ export const getSelectedContract = (contractName: string, compiler: CompilerAbst
       return txHelper.getConstructorInterface(contract.object.abi)
     },
     getConstructorInputs: () => {
-      const constructorInteface = txHelper.getConstructorInterface(contract.object.abi)
+      const constructorInterface = txHelper.getConstructorInterface(contract.object.abi)
 
-      return txHelper.inputParametersDeclarationToString(constructorInteface.inputs)
+      return txHelper.inputParametersDeclarationToString(constructorInterface.inputs)
     },
     isOverSizeLimit: async (args: string) => {
       const encodedParams = await txFormat.encodeParams(args, txHelper.getConstructorInterface(contract.object.abi))
@@ -119,10 +120,22 @@ const getConfirmationCb = (plugin: RunTab, dispatch: React.Dispatch<any>, confir
 
 export const continueHandler = (dispatch: React.Dispatch<any>, gasEstimationPrompt: (msg: string) => JSX.Element, error, continueTxExecution, cancelCb) => {
   if (error) {
-    let msg = typeof error !== 'string' ? error.message : error
-    
-    if (msg.includes('invalid opcode')) msg += '\n OR the EVM version used by the selected environment is not compatible with the compiler EVM version.'
-    
+    let msg = ''
+    if (typeof error === 'string') {
+      msg = error
+    }
+    if (error && error.innerError) {
+      msg += '\n' + error.innerError
+    }
+    if (error && error.message) {
+      msg += '\n' + error.message
+    }
+    if (error && error.error) {
+      msg += '\n' + error.error
+    }
+
+    if (msg.includes('invalid opcode')) msg += '\nThe EVM version used by the selected environment is not compatible with the compiler EVM version.'
+
     dispatch(displayNotification('Gas estimation failed', gasEstimationPrompt(msg), 'Send Transaction', 'Cancel Transaction', () => {
       continueTxExecution()
     }, () => {
@@ -250,9 +263,10 @@ export const loadAddress = (plugin: RunTab, dispatch: React.Dispatch<any>, contr
         return dispatch(displayNotification('Alert', error, 'OK', null))
       }
       if (loadType === 'abi') {
-        return addInstance(dispatch, { abi, address, name: '<at address>' })
+        const contractData = { name: '<at address>', abi, contract: { file: plugin.REACT_API.contracts.currentFile } } as ContractData
+        return addInstance(dispatch, { contractData, address, name: '<at address>' })
       } else if (loadType === 'instance') {
-        if (!contract) return dispatch(displayPopUp('No compiled contracts found.'))
+        if (!contract) return plugin.call('notification', 'toast', 'No compiled contracts found.')
         const currentFile = plugin.REACT_API.contracts.currentFile
         const compiler = plugin.REACT_API.contracts.contractList[currentFile].find(item => item.alias === contract.name)
         const contractData = getSelectedContract(contract.name, compiler.compiler)
@@ -272,7 +286,7 @@ export const syncContractsInternal = async (plugin: RunTab) => {
   }
   if (await plugin.call('manager', 'isActive', 'hardhat')) {
     plugin.call('hardhat', 'sync')
-  } 
+  }
   if (await plugin.call('manager', 'isActive', 'foundry')) {
     plugin.call('foundry', 'sync')
   }
@@ -295,7 +309,7 @@ export const runTransactions = (
   funcIndex?: number) => {
   let callinfo = ''
   if (lookupOnly) callinfo = 'call'
-  else if (funcABI.type === 'fallback' || funcABI.type === 'receive') callinfo = 'lowLevelInteracions'
+  else if (funcABI.type === 'fallback' || funcABI.type === 'receive') callinfo = 'lowLevelinteractions'
   else callinfo = 'transact'
   _paq.push(['trackEvent', 'udapp', callinfo, plugin.blockchain.getCurrentNetworkStatus().network.name])
 
@@ -338,13 +352,13 @@ export const getFuncABIInputs = (plugin: RunTab, funcABI: FuncABI) => {
 
 export const updateInstanceBalance = async (plugin: RunTab, dispatch: React.Dispatch<any>) => {
   if (plugin.REACT_API?.instances?.instanceList?.length) {
-    const instances = plugin.REACT_API?.instances?.instanceList
+    const instances = plugin.REACT_API?.instances?.instanceList?.length ? plugin.REACT_API?.instances?.instanceList : []
     for (const instance of instances) {
       const balInEth = await plugin.blockchain.getBalanceInEther(instance.address)
       instance.balance = balInEth
     }
     dispatch(updateInstanceBalance(instances, dispatch))
-  } 
+  }
 }
 
 export const isValidContractAddress = async (plugin: RunTab, address: string) => {
@@ -394,7 +408,7 @@ export const isValidContractUpgrade = async (plugin: RunTab, proxyAddress: strin
 
     if (parsedNetworkFile.deployments[proxyAddress] && parsedNetworkFile.deployments[proxyAddress].implementationAddress) {
       const solcBuildExists = await plugin.call('fileManager', 'exists', `.deploys/upgradeable-contracts/${identifier}/solc-${parsedNetworkFile.deployments[proxyAddress].implementationAddress}.json`)
-        
+
       if (solcBuildExists) {
         const solcFile: string = await plugin.call('fileManager', 'readFile', `.deploys/upgradeable-contracts/${identifier}/solc-${parsedNetworkFile.deployments[proxyAddress].implementationAddress}.json`)
         const parsedSolcFile: SolcBuildFile = JSON.parse(solcFile)

@@ -1,15 +1,17 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-use-before-define
 import React from 'react'
-import {FormattedMessage} from 'react-intl'
+import { FormattedMessage } from 'react-intl'
 import '../remix-ui-plugin-manager.css'
-import {CustomTooltip} from '@remix-ui/helper'
+import { CustomTooltip } from '@remix-ui/helper'
+const _paq = (window._paq = window._paq || [])
+
 interface PluginCardProps {
   profile: any
   buttonText: string
   deactivatePlugin: (pluginName: string) => void
 }
 
-function ActivePluginCard({profile, buttonText, deactivatePlugin}: PluginCardProps) {
+function ActivePluginCard({ profile, buttonText, deactivatePlugin }: PluginCardProps) {
   return (
     <div className="list-group list-group-flush plugins-list-group" data-id="pluginManagerComponentActiveTile">
       <article className="list-group-item py-1 mb-1 plugins-list-group-item">
@@ -17,7 +19,7 @@ function ActivePluginCard({profile, buttonText, deactivatePlugin}: PluginCardPro
           <h6 className="remixui_displayName plugin-name">
             <div>
               {profile.displayName || profile.name}
-              {profile?.maintainedBy?.toLowerCase() == 'remix' && (
+              {profile?.maintainedBy?.toLowerCase() == 'remix' ? (
                 <CustomTooltip
                   placement="right"
                   tooltipId="pluginManagerActiveTitleByRemix"
@@ -25,8 +27,25 @@ function ActivePluginCard({profile, buttonText, deactivatePlugin}: PluginCardPro
                   tooltipText={<FormattedMessage id="pluginManager.maintainedByRemix" />}
                 >
                   <i aria-hidden="true" className="px-1 text-success fas fa-check"></i>
-                </CustomTooltip>
-              )}
+                </CustomTooltip>)
+                : profile?.maintainedBy ? (
+                  <CustomTooltip
+                    placement="right"
+                    tooltipId="pluginManagerActiveTitleByRemix"
+                    tooltipClasses="text-nowrap"
+                    tooltipText={"Maintained by " + profile?.maintainedBy}
+                  >
+                    <i aria-hidden="true" className="px-1 text-secondary far fa-exclamation-circle"></i>
+                  </CustomTooltip>)
+                  : (<CustomTooltip
+                    placement="right"
+                    tooltipId="pluginManagerActiveTitleExternally"
+                    tooltipClasses="text-nowrap"
+                    tooltipText={<FormattedMessage id="pluginManager.maintainedExternally" />}
+                  >
+                    <i aria-hidden="true" className="px-1 text-secondary far fa-exclamation-circle"></i>
+                  </CustomTooltip>)
+              }
               {profile.documentation && (
                 <CustomTooltip
                   placement="right"
@@ -64,10 +83,11 @@ function ActivePluginCard({profile, buttonText, deactivatePlugin}: PluginCardPro
                 placement="right"
                 tooltipId={`pluginManagerInactiveActiveBtn${profile.name}`}
                 tooltipClasses="text-nowrap"
-                tooltipText={<FormattedMessage id="pluginManager.deactivatePlugin" values={{pluginName: profile.displayName || profile.name}} />}
+                tooltipText={<FormattedMessage id="pluginManager.deactivatePlugin" values={{ pluginName: profile.displayName || profile.name }} />}
               >
                 <button
                   onClick={() => {
+                    _paq.push(['trackEvent', 'pluginManager', 'deactivateBtn', 'deactivate btn ' + profile.name])
                     deactivatePlugin(profile.name)
                   }}
                   className="btn btn-secondary btn-sm"

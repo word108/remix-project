@@ -46,10 +46,9 @@ module.exports = {
       .waitForElementPresent('//*[@id="staticanalysisresult"]', 5000)
       .useCss()
       // Check warning count
-      .pause()
       .waitForElementVisible('span#ssaRemixtab')
       .click('span#ssaRemixtab')
-      .assert.containsText('span#ssaRemixtab > *[data-id="RemixStaticAnalysisErrorCount"]', '1')
+      .assert.containsText('span#ssaRemixtab > *[data-id="RemixStaticAnalysisErrorCount"]', '3')
       .verify.elementPresent('input[name="showLibWarnings"]')
       .verify.not.elementPresent('input[name="showLibWarnings"]:checked')
       .verify.elementPresent('label[id="headingshowLibWarnings"]')
@@ -57,10 +56,10 @@ module.exports = {
       .pause(1000)
       .waitForElementVisible('span#ssaRemixtab')
       .click('span#ssaRemixtab')
-      .assert.containsText('span#ssaRemixtab > *[data-id="RemixStaticAnalysisErrorCount', '386')
+      .assert.containsText('span#ssaRemixtab > *[data-id="RemixStaticAnalysisErrorCount', '388')
       .click('label[id="headingshowLibWarnings"]')
       .pause(1000)
-      .assert.containsText('span#ssaRemixtab > *[data-id="RemixStaticAnalysisErrorCount', '1')
+      .assert.containsText('span#ssaRemixtab > *[data-id="RemixStaticAnalysisErrorCount', '3')
       .end()
   }
 }

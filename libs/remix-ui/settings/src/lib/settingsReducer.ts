@@ -56,7 +56,12 @@ export const initialState = {
       name: 'copilot/suggest/temperature',
       value: 0.5,
       textClass: textSecondary
-    }
+    },
+    {
+      name: 'save-evm-state',
+      isChecked: false,
+      textClass: textSecondary
+    },
   ]
 }
 
@@ -112,7 +117,7 @@ export const settingReducer = (state, action) => {
     return {
       ...state
     }
-    
+
   case 'useAutoCompletion':
     state.elementState.map(element => {
       if (element.name === 'useAutoCompletion') {
@@ -173,10 +178,21 @@ export const settingReducer = (state, action) => {
     return {
       ...state
     }
+
+  case 'save-evm-state':
+    state.elementState.map(element => {
+      if (element.name === 'save-evm-state') {
+        element.isChecked = action.payload.isChecked
+        element.textClass = action.payload.textClass
+      }
+    })
+    return {
+      ...state
+    }
   default:
     return initialState
   }
-  
+
 }
 
 export const toastInitialState = {

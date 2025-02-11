@@ -25,6 +25,9 @@
 .udapp_settingsCompiledBy {
   margin-bottom: 4px;
 }
+.udapp_syncFramework {
+  margin-bottom: 4px;
+}
 .udapp_environment {
   display: flex;
   align-items: center;
@@ -138,11 +141,6 @@
 .udapp_input {
   font-size: 10px !important;
 }
-.udapp_noInstancesText {
-  font-style: italic;
-  text-align: left;
-  padding-left: 15px;
-}
 .udapp_pendingTxsText {
   font-style: italic;
   display: flex;
@@ -212,7 +210,6 @@
   display: flex;
 }
 .udapp_gasNval {
-  width: 55%;
   font-size: 0.8rem;
 }
 .udapp_gasNvalUnit {
@@ -526,3 +523,8 @@
   width: 100%;
 }
 
+.remixui_runtabBalancelabel {
+  font-size: 0.688rem;
+  line-height: 0.75rem;
+  color: var(--runtab);
+}

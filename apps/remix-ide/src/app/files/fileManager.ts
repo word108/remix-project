@@ -4,10 +4,11 @@ import { saveAs } from 'file-saver'
 import JSZip from 'jszip'
 import { Plugin } from '@remixproject/engine'
 import * as packageJson from '../../../../../package.json'
-import {Registry} from '@remix-project/remix-lib'
+import { Registry } from '@remix-project/remix-lib'
 import { fileChangedToastMsg, recursivePasteToastMsg, storageFullMessage } from '@remix-ui/helper'
 import helper from '../../lib/helper.js'
 import { RemixAppManager } from '../../remixAppManager'
+import { commitChange } from '@remix-ui/git'
 
 /*
   attach to files event (removed renamed)
@@ -24,7 +25,8 @@ const profile = {
   methods: ['closeAllFiles', 'closeFile', 'file', 'exists', 'open', 'writeFile', 'writeMultipleFiles', 'writeFileNoRewrite',
     'readFile', 'copyFile', 'copyDir', 'rename', 'mkdir', 'readdir', 'dirList', 'fileList', 'remove', 'getCurrentFile', 'getFile',
     'getFolder', 'setFile', 'switchFile', 'refresh', 'getProviderOf', 'getProviderByName', 'getPathFromUrl', 'getUrlFromPath',
-    'saveCurrentFile', 'setBatchFiles', 'isGitRepo', 'isFile', 'isDirectory', 'hasGitSubmodule'
+    'saveCurrentFile', 'setBatchFiles', 'isGitRepo', 'isFile', 'isDirectory', 'hasGitSubmodule', 'copyFolderToJson', 'diff',
+    'hasGitSubmodules', 'getOpenedFiles'
   ],
   kind: 'file-system'
 }
@@ -38,7 +40,7 @@ const errorMsg = {
 const createError = (err) => {
   return new Error(`${errorMsg[err.code]} ${err.message || ''}`)
 }
-class FileManager extends Plugin {
+export default class FileManager extends Plugin {
   mode: string
   openedFiles: any
   editor: any
@@ -251,7 +253,7 @@ class FileManager extends Plugin {
       throw new Error(e)
     }
   }
-  
+
   /**
    * Set the content of a specific file, does nnot rewrite file if it exists but creates a new unique name
    * @param {string} path path of the file
@@ -265,11 +267,11 @@ class FileManager extends Plugin {
       if (await this.exists(path)) {
         const newPath = await helper.createNonClashingNameAsync(path, this)
         const content = await this.setFileContent(newPath, data)
-        return {newContent: content, newPath}
+        return { newContent: content, newPath }
       } else {
         const ret = await this.setFileContent(path, data)
         this.emit('fileAdded', path)
-        return {newContent: ret, newpath: path}
+        return { newContent: ret, newPath: path }
       }
     } catch (e) {
       throw new Error(e)
@@ -310,7 +312,7 @@ class FileManager extends Plugin {
       await this._handleExists(dest, `Cannot paste content into ${dest}. Path does not exist.`)
       await this._handleIsDir(dest, `Cannot paste content into ${dest}. Path is not directory.`)
       const content = await this.readFile(src)
-      let copiedFilePath = dest + (customName ? '/' + customName : '/' + `Copy_${helper.extractNameFromKey(src)}`)
+      let copiedFilePath = dest + (customName ? '/' + customName : '/' + `${helper.extractNameFromKey(src)}`)
       copiedFilePath = await helper.createNonClashingNameAsync(copiedFilePath, this)
 
       await this.writeFile(copiedFilePath, content)
@@ -523,7 +525,7 @@ class FileManager extends Plugin {
     this._deps.electronExplorer.event.on('fileRenamed', (oldName, newName, isFolder) => { this.fileRenamedEvent(oldName, newName, isFolder) })
     this._deps.electronExplorer.event.on('fileRemoved', (path) => { this.fileRemovedEvent(path) })
     this._deps.electronExplorer.event.on('fileAdded', (path) => { this.fileAddedEvent(path) })
-    
+
     this.getCurrentFile = this.file
     this.getFile = this.readFile
     this.getFolder = this.readdir
@@ -702,6 +704,37 @@ class FileManager extends Plugin {
     this.emit('noFileSelected')
   }
 
+  async diff(change: commitChange) {
+    await this.saveCurrentFile()
+    this._deps.config.set('currentFile', '')
+    // TODO: Only keep `this.emit` (issue#2210)
+    this.emit('noFileSelected')
+
+    if (!change.readonly){
+      let file = this.normalize(change.path)
+      const resolved = this.getPathFromUrl(file)
+      file = resolved.file
+      this._deps.config.set('currentFile', file)
+      this.openedFiles[file] = file
+    }
+
+    await this.editor.openDiff(change)
+    this.emit('openDiff', change)
+  }
+
+  async closeDiff(change: commitChange) {
+    if (!change.readonly){
+      const file = this.normalize(change.path)
+      delete this.openedFiles[file]
+      if (!Object.keys(this.openedFiles).length) {
+        this._deps.config.set('currentFile', '')
+        // TODO: Only keep `this.emit` (issue#2210)
+        this.emit('noFileSelected')
+      }
+    }
+    this.emit('closeDiff', change)
+  }
+
   async openFile(file?: string) {
     if (!file) {
       this.emit('noFileSelected')
@@ -710,23 +743,24 @@ class FileManager extends Plugin {
       const resolved = this.getPathFromUrl(file)
       file = resolved.file
       await this.saveCurrentFile()
-      if (this.currentFile() === file) return
+      // we always open the file in the editor, even if it's the same as the current one if the editor is in diff mode
+      if (this.currentFile() === file && !this.editor.isDiff) return
 
       const provider = resolved.provider
       this._deps.config.set('currentFile', file)
+
       this.openedFiles[file] = file
 
       let content = ''
       try {
         content = await provider.get(file)
-
       } catch (error) {
         console.log(error)
         throw error
       }
       try {
         // This make sure dependencies are loaded in the editor context.
-        // This ensure monaco is aware of deps artifacts, so it can provide basic features like "go to" symbols.   
+        // This ensure monaco is aware of deps artifacts, so it can provide basic features like "go to" symbols.
         await this.editor.handleTypeScriptDependenciesOf(file, content, path => this.readFile(path), path => this.exists(path))
       } catch (e) {
         console.log('unable to handle TypeScript dependencies of', file)
@@ -736,6 +770,7 @@ class FileManager extends Plugin {
       } else {
         await this.editor.open(file, content)
       }
+      // TODO: Only keep `this.emit` (issue#2210)
       this.emit('currentFileChanged', file)
       return true
     }
@@ -927,7 +962,12 @@ class FileManager extends Plugin {
     return exists
   }
 
-
+  /**
+   * Check if a file can be moved
+   * @param src source file
+   * @param dest destination file
+   * @returns {boolean} true if the file is allowed to be moved
+   */
   async moveFileIsAllowed (src: string, dest: string) {
     try {
       src = this.normalize(src)
@@ -950,6 +990,12 @@ class FileManager extends Plugin {
     }
   }
 
+  /**
+   * Check if a folder can be moved
+   * @param src source folder
+   * @param dest destination folder
+   * @returns {boolean} true if the folder is allowed to be moved
+   */
   async moveDirIsAllowed (src: string, dest: string) {
     try {
       src = this.normalize(src)
@@ -970,7 +1016,7 @@ class FileManager extends Plugin {
       if (provider.isSubDirectory(src, dest)) {
         this.call('notification', 'toast', recursivePasteToastMsg())
         return false
-      } 
+      }
       return true
     } catch (e) {
       console.log(e)
@@ -1033,13 +1079,21 @@ class FileManager extends Plugin {
       if (provider.isSubDirectory(src, dest)) {
         this.call('notification', 'toast', recursivePasteToastMsg())
         return false
-      } 
+      }
       await this.inDepthCopy(src, dest, dirName)
       await this.remove(src)
 
     } catch (e) {
       throw new Error(e)
     }
+  }
+
+  async copyFolderToJson(folder: string) {
+    const provider = this.currentFileProvider()
+    if (provider && provider.copyFolderToJson) {
+      return await provider.copyFolderToJson(folder)
+    }
+    throw new Error('copyFolderToJson not available')
   }
 }
 

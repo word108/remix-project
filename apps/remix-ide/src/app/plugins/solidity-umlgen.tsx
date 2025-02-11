@@ -1,16 +1,17 @@
 /* eslint-disable @nrwl/nx/enforce-module-boundaries */
-import {ViewPlugin} from '@remixproject/engine-web'
+import { ViewPlugin } from '@remixproject/engine-web'
 import React from 'react'
 // eslint-disable-next-line @nrwl/nx/enforce-module-boundaries
-import {RemixUiSolidityUmlGen} from '@remix-ui/solidity-uml-gen'
-import {ISolidityUmlGen, ThemeQualityType, ThemeSummary} from 'libs/remix-ui/solidity-uml-gen/src/types'
-import {RemixAppManager} from 'libs/remix-ui/plugin-manager/src/types'
-import {normalizeContractPath} from 'libs/remix-ui/solidity-compiler/src/lib/logic/flattenerUtilities'
-import {convertAST2UmlClasses} from 'sol2uml/lib/converterAST2Classes'
+import { RemixUiSolidityUmlGen } from '@remix-ui/solidity-uml-gen'
+import { ISolidityUmlGen, ThemeQualityType, ThemeSummary } from 'libs/remix-ui/solidity-uml-gen/src/types'
+import { RemixAppManager } from 'libs/remix-ui/plugin-manager/src/types'
+import { normalizeContractPath } from 'libs/remix-ui/solidity-compiler/src/lib/logic/flattenerUtilities'
+import { convertAST2UmlClasses } from 'sol2uml/lib/converterAST2Classes'
 import vizRenderStringSync from '@aduh95/viz.js/sync'
-import {PluginViewWrapper} from '@remix-ui/helper'
-import {customAction} from '@remixproject/plugin-api'
-import {ClassOptions} from 'sol2uml/lib/converterClass2Dot'
+import { PluginViewWrapper } from '@remix-ui/helper'
+import { customAction } from '@remixproject/plugin-api'
+import { ClassOptions } from 'sol2uml/lib/converterClass2Dot'
+import type { CompilerInput } from '@remix-project/remix-solidity'
 const parser = (window as any).SolidityParser
 
 const _paq = (window._paq = window._paq || [])
@@ -74,7 +75,7 @@ export class SolidityUmlGen extends ViewPlugin implements ISolidityUmlGen {
       try {
         if (data.sources && Object.keys(data.sources).length > 1) {
           // we should flatten first as there are multiple asts
-          result = await this.flattenContract(source, file, data)
+          result = await this.flattenContract(source, file, data, JSON.parse(input))
         }
         const ast = result.length > 1 ? parser.parse(result) : parser.parse(source.sources[file].content)
         this.umlClasses = convertAST2UmlClasses(ast, this.currentFile)
@@ -142,8 +143,8 @@ export class SolidityUmlGen extends ViewPlugin implements ISolidityUmlGen {
    * and assigns to a local property
    * @returns {Promise<string>}
    */
-  async flattenContract(source: any, filePath: string, data: any) {
-    const result = await this.call('contractflattener', 'flattenContract', source, filePath, data)
+  async flattenContract(source: any, filePath: string, data: any, input: CompilerInput) {
+    const result = await this.call('contractflattener', 'flattenContract', source, filePath, data, input)
     return result
   }
 
@@ -206,10 +207,10 @@ interface Sol2umlClassOptions extends ClassOptions {
   textColor?: string
 }
 
-import {dirname} from 'path'
-import {convertClass2Dot} from 'sol2uml/lib/converterClass2Dot'
-import {Association, ClassStereotype, ReferenceType, UmlClass} from 'sol2uml/lib/umlClass'
-import {findAssociatedClass} from 'sol2uml/lib/associations'
+import { dirname } from 'path'
+import { convertClass2Dot } from 'sol2uml/lib/converterClass2Dot'
+import { Association, ClassStereotype, ReferenceType, UmlClass } from 'sol2uml/lib/umlClass'
+import { findAssociatedClass } from 'sol2uml/lib/associations'
 
 // const debug = require('debug')('sol2uml')
 

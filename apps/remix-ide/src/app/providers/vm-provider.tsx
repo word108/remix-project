@@ -1,8 +1,8 @@
 import React from 'react' // eslint-disable-line
 import * as packageJson from '../../../../../package.json'
-import {JsonDataRequest, RejectRequest, SuccessRequest} from '../providers/abstract-provider'
-import {Plugin} from '@remixproject/engine'
-import {IProvider} from './abstract-provider'
+import { JsonDataRequest, RejectRequest, SuccessRequest } from '../providers/abstract-provider'
+import { Plugin } from '@remixproject/engine'
+import { IProvider } from './abstract-provider'
 
 export class BasicVMProvider extends Plugin implements IProvider {
   blockchain
@@ -33,7 +33,7 @@ export class BasicVMProvider extends Plugin implements IProvider {
       await this.blockchain.providers.vm.provider.sendAsync(data, (error, result) => {
         if (error) return reject(error)
         else {
-          resolve({jsonrpc: '2.0', result, id: data.id})
+          resolve({ jsonrpc: '2.0', result, id: data.id })
         }
       })
     } catch (error) {
@@ -46,17 +46,17 @@ export class MergeVMProvider extends BasicVMProvider {
   constructor(blockchain) {
     super(
       {
-        name: 'vm-merge',
-        displayName: 'Remix VM (Merge)',
+        name: 'vm-paris',
+        displayName: 'Remix VM (Paris)',
         kind: 'provider',
-        description: 'Remix VM (Merge)',
+        description: 'Remix VM (Paris)',
         methods: ['sendAsync', 'init'],
         version: packageJson.version
       },
       blockchain
     )
     this.blockchain = blockchain
-    this.fork = 'merge'
+    this.fork = 'paris'
   }
 }
 
@@ -111,5 +111,31 @@ export class ShanghaiVMProvider extends BasicVMProvider {
     )
     this.blockchain = blockchain
     this.fork = 'shanghai'
+  }
+}
+
+export class CancunVMProvider extends BasicVMProvider {
+  constructor(blockchain) {
+    super(
+      {
+        name: 'vm-cancun',
+        displayName: 'Remix VM (Cancun)',
+        kind: 'provider',
+        description: 'Remix VM (Cancun)',
+        methods: ['sendAsync', 'init'],
+        version: packageJson.version
+      },
+      blockchain
+    )
+    this.blockchain = blockchain
+    this.fork = 'cancun'
+  }
+}
+
+export class ForkedVMStateProvider extends BasicVMProvider {
+  constructor(profile, blockchain, fork) {
+    super(profile, blockchain)
+    this.blockchain = blockchain
+    this.fork = fork
   }
 }

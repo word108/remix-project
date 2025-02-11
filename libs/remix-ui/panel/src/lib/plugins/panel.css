@@ -104,7 +104,13 @@ iframe {
     height: 2rem !important;
 }
 
-
 .terminal-wrap.minimized.desktop {
-    height: 4.5rem !important;
+}
+
+.highlight {
+    animation: highlight 2s forwards;
+}
+
+.remixui_height {
+  height: 97vh;
 }

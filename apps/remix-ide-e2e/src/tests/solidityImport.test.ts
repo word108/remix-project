@@ -129,8 +129,7 @@ module.exports = {
       .setValue('[data-id="modalDialogCustomPromptTextClone"]', 'https://github.com/yann300/remix-reward')
       .click('[data-id="fileSystem-modal-footer-ok-react"]')
       .waitForElementPresent('.fa-spinner')
-      .pause(5000)
-      .waitForElementNotPresent('.fa-spinner')
+      .waitForElementNotPresent('.fa-spinner', 120000)
       .waitForElementVisible('*[data-id="treeViewLitreeViewItem.git"]')
       .waitForElementContainsText('[data-id="workspacesSelect"]', 'remix-reward')
       .clickLaunchIcon('solidity')
@@ -159,7 +158,7 @@ const sources = [
     'Untitled5.sol': { content: 'import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v2.3.0/contracts/token/ERC20/ERC20.sol"; contract test8 {}' }
   },
   {
-    'Untitled6.sol': { content: 'import "https://github.com/OpenZeppelin/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol"; contract test10 {}' }
+    'Untitled6.sol': { content: 'import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol"; contract test10 {}' }
   },
   {
     'Untitled7.sol': { content: 'import "https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/master/contracts/token/ERC20/ERC20.sol"; contract test11 {}' }

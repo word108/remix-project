@@ -28,7 +28,7 @@ export const loadTypes = async (monaco) => {
   const ethersBase64 = await import('raw-loader!@ethersproject/base64/lib/index.d.ts')
   const ethersBase64Default = ethersBase64.default.replace(/@ethersproject\//g, '@ethersproject_')
   monaco.languages.typescript.typescriptDefaults.addExtraLib(ethersBase64Default, `file:///node_modules/@types/@ethersproject_base64/index.d.ts`)
-    
+
   // @ts-ignore
   const ethersBasex = await import('raw-loader!@ethersproject/basex/lib/index.d.ts')
   const ethersBasexDefault = ethersBasex.default.replace(/@ethersproject\//g, '@ethersproject_')
@@ -115,9 +115,9 @@ export const loadTypes = async (monaco) => {
   monaco.languages.typescript.typescriptDefaults.addExtraLib(ethersSha2Default, `file:///node_modules/@types/@ethersproject_sha2/index.d.ts`)
 
   // @ts-ignore
-  const ethersSingningkey = await import('raw-loader!@ethersproject/signing-key/lib/index.d.ts')
-  const ethersSingningkeyDefault = ethersSingningkey.default.replace(/@ethersproject\//g, '@ethersproject_')
-  monaco.languages.typescript.typescriptDefaults.addExtraLib(ethersSingningkeyDefault, `file:///node_modules/@types/@ethersproject_signing-key/index.d.ts`)
+  const ethersSigningkey = await import('raw-loader!@ethersproject/signing-key/lib/index.d.ts')
+  const ethersSigningkeyDefault = ethersSigningkey.default.replace(/@ethersproject\//g, '@ethersproject_')
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(ethersSigningkeyDefault, `file:///node_modules/@types/@ethersproject_signing-key/index.d.ts`)
 
   // @ts-ignore
   const ethersSolidity = await import('raw-loader!@ethersproject/solidity/lib/index.d.ts')

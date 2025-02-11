@@ -42,7 +42,7 @@ module.exports = {
       .clickLaunchIcon('udapp')
       .click('.udapp_contractActionsContainerSingle > div')
       .clickInstance(0)
-      .clickFunction('retunValues1 - transact (not payable)')
+      .clickFunction('returnValues1 - transact (not payable)')
       .testFunction('last',
         {
           status: '0x1 Transaction mined and execution succeed',
@@ -53,7 +53,7 @@ module.exports = {
             3: 'address: _a 0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c'
           }
         })
-      .clickFunction('retunValues2 - transact (not payable)')
+      .clickFunction('returnValues2 - transact (not payable)')
       .testFunction('last',
         {
           status: '0x1 Transaction mined and execution succeed',
@@ -70,7 +70,7 @@ module.exports = {
             9: 'bytes32: _b32 0x0325235325325235325235325235320000000000000000000000000000000000'
           }
         }).pause(500)
-      .clickFunction('retunValues3 - transact (not payable)')
+      .clickFunction('returnValues3 - transact (not payable)')
       .testFunction('last',
         {
           status: '0x1 Transaction mined and execution succeed',
@@ -150,6 +150,14 @@ module.exports = {
       .click('*[data-id="deployAndRunClearInstances"]')
   },
 
+  'Should filter displayed transactions #group2': function (browser: NightwatchBrowser) {
+    browser
+      // it should contain: 0xd9145CCE52D386f254917e481eB44e9943F39138
+      .checkTerminalFilter('0xd9145CCE52D386f254917e481eB44e9943F39138', '0xd9145CCE52D386f254917e481eB44e9943F39138', false)
+      // it should not contain: 0xd9145CCE52D386f254917e481eB44e9943F39140 (it ends with 40)
+      .checkTerminalFilter('0xd9145CCE52D386f254917e481eB44e9943F39140', '0xd9145CCE52D386f254917e481eB44e9943F39138', true)
+  },
+
   'Should Compile and Deploy a contract which define a custom error, the error should be logged in the terminal #group3': function (browser: NightwatchBrowser) {
     browser.testContracts('customError.sol', sources[4]['customError.sol'], ['C'])
       .clickLaunchIcon('udapp')
@@ -166,7 +174,6 @@ module.exports = {
       .journalLastChildIncludes('"documentation": "param1"')
       .journalLastChildIncludes('"documentation": "param2"')
       .journalLastChildIncludes('"documentation": "param3"')
-      .journalLastChildIncludes('Debug the transaction to get more information.')
       .click('*[data-id="deployAndRunClearInstances"]')
   },
 
@@ -190,7 +197,6 @@ module.exports = {
       .journalLastChildIncludes('"documentation": "param1"')
       .journalLastChildIncludes('"documentation": "param2"')
       .journalLastChildIncludes('"documentation": "param3"')
-      .journalLastChildIncludes('Debug the transaction to get more information.')
   },
 
   'Should Compile and Deploy a contract which define a custom error in a library, the error should be logged in the terminal #group3': function (browser: NightwatchBrowser) {
@@ -208,7 +214,6 @@ module.exports = {
       .journalLastChildIncludes('"documentation": "param1 from library"')
       .journalLastChildIncludes('"documentation": "param2 from library"')
       .journalLastChildIncludes('"documentation": "param3 from library"')
-      .journalLastChildIncludes('Debug the transaction to get more information.')
   },
 
   'Should compile and deploy 2 simple contracts, the contract creation component state should be correctly reset for the deployment of the second contract #group4': function (browser: NightwatchBrowser) {
@@ -219,6 +224,7 @@ module.exports = {
       .createContract('42, 24')
       .openFile('Storage.sol')
       .clickLaunchIcon('udapp')
+      .waitForElementVisible('*[data-title="uint256 p"]', 10000)
       .createContract('102') // this creation will fail if the component hasn't been properly reset.
       .clickInstance(1)
       .clickFunction('store - transact (not payable)', { types: 'uint256 num', values: '24' })
@@ -239,11 +245,13 @@ module.exports = {
       .setSolidityCompilerVersion('soljson-v0.8.17+commit.8df45f5f.js')
       .clickLaunchIcon('udapp')
       .switchEnvironment('vm-mainnet-fork')
+      .click('*[data-id="runTabSelectAccount"]')
       .waitForElementPresent({
         locateStrategy: 'css selector',
-        selector: 'select[data-id="runTabSelectAccount"] option[value="0xdD870fA1b7C4700F2BD7f44238821C26f7392148"]',
+        selector: `*[data-id="0xdD870fA1b7C4700F2BD7f44238821C26f7392148"]`,
         timeout: 250000
       }) // wait for the udapp to load the list of accounts
+      .click('*[data-id="0xdD870fA1b7C4700F2BD7f44238821C26f7392148"]')
       .selectContract('MyResolver')
       .createContract('')
       .clickInstance(0)
@@ -312,10 +320,10 @@ const sources = [
       contract TestContract { function f() public returns (uint) { return 8; }
       function g() public returns (uint, string memory, bool, uint) {
         uint payment = 345;
-        bool payed = true;
+        bool paid = true;
         string memory comment = "comment_comment_";
         uint month = 4;
-        return (payment, comment, payed, month); } }`
+        return (payment, comment, paid, month); } }`
     }
   },
   {
@@ -323,14 +331,14 @@ const sources = [
       content: `
   contract testReturnValues {
     enum ActionChoices { GoLeft, GoRight, GoStraight, SitStill }
-    function retunValues1 () public returns (bool _b, uint _u, int _i, address _a)  {
+    function returnValues1 () public returns (bool _b, uint _u, int _i, address _a)  {
         _b = true;
         _u = 345;
         _i = -345;
         _a = msg.sender;
     }
 
-    function retunValues2 () public returns (bytes1 _b, bytes2 _b2, bytes3 _b3, bytes memory _blit, bytes5 _b5, bytes6 _b6, string memory _str, bytes7 _b7, bytes22 _b22, bytes32 _b32)  {
+    function returnValues2 () public returns (bytes1 _b, bytes2 _b2, bytes3 _b3, bytes memory _blit, bytes5 _b5, bytes6 _b6, string memory _str, bytes7 _b7, bytes22 _b22, bytes32 _b32)  {
         _b = 0x12;
         _b2 = 0x1223;
         _b5 = hex"043245";
@@ -342,7 +350,7 @@ const sources = [
         _str = "this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string _ this is a long string";
     }
 
-    function retunValues3 () public returns (ActionChoices _en, int[5][] memory _a1)  {
+    function returnValues3 () public returns (ActionChoices _en, int[5][] memory _a1)  {
        _en = ActionChoices.GoStraight;
        int[5][] memory a = new int[5][](3);
        a[0] = [int(1),-45,-78,56,60];

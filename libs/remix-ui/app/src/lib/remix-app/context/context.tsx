@@ -1,16 +1,19 @@
 import React from 'react'
-import {AlertModal, AppModal} from '../interface'
-import {ModalInitialState} from '../state/modals'
+import { AlertModal, AppModal, AppState } from '../interface'
+import { ModalInitialState } from '../state/modals'
+import { AppAction } from '../actions/app'
 
 export type appProviderContextType = {
   settings: any,
-  showMatamo: boolean,
+  showMatomo: boolean,
   showEnter: boolean,
   appManager: any
   modal: any
+  appState: AppState
+  appStateDispatch: React.Dispatch<AppAction>
 }
 
-export enum appPlatformTypes  {
+export enum appPlatformTypes {
   web = 'web',
   desktop = 'desktop'
 }

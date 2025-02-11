@@ -6,10 +6,7 @@ import { FileSystemProvider } from '@remix-ui/workspace' // eslint-disable-line
 import {Registry} from '@remix-project/remix-lib'
 import { RemixdHandle } from '../plugins/remixd-handle'
 import {PluginViewWrapper} from '@remix-ui/helper'
-const { HardhatHandle } = require('../files/hardhat-handle.js')
-const { FoundryHandle } = require('../files/foundry-handle.js')
 const { TruffleHandle } = require('../files/truffle-handle.js')
-const { SlitherHandle } = require('../files/slither-handle.js')
 
 /*
   Overview of APIs:
@@ -34,6 +31,7 @@ const profile = {
   methods: [
     'createNewFile',
     'uploadFile',
+    'echoCall',
     'getCurrentWorkspace',
     'getAvailableWorkspaceName',
     'getWorkspaces',
@@ -43,9 +41,10 @@ const profile = {
     'registerContextMenuItem',
     'renameWorkspace',
     'deleteWorkspace',
-    'loadTemplate', 
+    'loadTemplate',
     'clone',
     'isExpanded',
+    'isGist'
   ],
   events: ['setWorkspace', 'workspaceRenamed', 'workspaceDeleted', 'workspaceCreated'],
   icon: 'assets/img/fileManager.webp',
@@ -56,8 +55,8 @@ const profile = {
   version: packageJson.version,
   maintainedBy: 'Remix'
 }
-module.exports = class Filepanel extends ViewPlugin {
-  constructor(appManager) {
+export default class Filepanel extends ViewPlugin {
+  constructor(appManager, contentImport) {
     super(profile)
     this.registry = Registry.getInstance()
     this.fileProviders = this.registry.get('fileproviders').api
@@ -67,10 +66,8 @@ module.exports = class Filepanel extends ViewPlugin {
     this.el.setAttribute('id', 'fileExplorerView')
 
     this.remixdHandle = new RemixdHandle(this.fileProviders.localhost, appManager)
-    this.hardhatHandle = new HardhatHandle()
-    this.foundryHandle = new FoundryHandle()
     this.truffleHandle = new TruffleHandle()
-    this.slitherHandle = new SlitherHandle()
+    this.contentImport = contentImport
     this.workspaces = []
     this.appManager = appManager
     this.currentWorkspaceMetadata = null
@@ -131,6 +128,20 @@ module.exports = class Filepanel extends ViewPlugin {
     })
   }
 
+  /**
+   * return the gist id if the current workspace is a gist workspace, otherwise returns null
+   * @argument {String} workspaceName - the name of the workspace to check against. default to the current workspace.
+   * @returns {string} gist id or null
+   */
+  isGist (workspaceName) {
+    workspaceName = workspaceName || this.currentWorkspaceMetadata && this.currentWorkspaceMetadata.name
+    const isGist = workspaceName.startsWith('gist')
+    if (isGist) {
+      return workspaceName.split(' ')[1]
+    }
+    return null
+  }
+
   getCurrentWorkspace() {
     return this.currentWorkspaceMetadata
   }
@@ -139,10 +150,10 @@ module.exports = class Filepanel extends ViewPlugin {
     return this.workspaces
   }
 
-  getAvailableWorkspaceName(name) {    
+  getAvailableWorkspaceName(name) {
     if (!this.workspaces) return name
     let index = 1
-    let workspace = this.workspaces.find((workspace) => workspace.name === name + ' - ' + index)    
+    let workspace = this.workspaces.find((workspace) => workspace.name === name + ' - ' + index)
     while (workspace) {
       index++
       workspace = this.workspaces.find((workspace) => workspace.name === name + ' - ' + index)
@@ -178,7 +189,7 @@ module.exports = class Filepanel extends ViewPlugin {
         if (err) reject(err)
         else resolve(data || true)
       })
-    })
+    }, false)
   }
 
   renameWorkspace(oldName, workspaceName) {

@@ -7,11 +7,13 @@ import {Registry} from '@remix-project/remix-lib'
 const _paq = (window._paq = window._paq || [])
 
 // requiredModule removes the plugin from the plugin manager list on UI
-let requiredModules = [ // services + layout views + system views
+let requiredModules = [
+  // services + layout views + system views
   'manager',
   'config',
   'compilerArtefacts',
   'compilerMetadata',
+  'compilerloader',
   'contextualListener',
   'editor',
   'offsetToLineColumnConverter',
@@ -23,6 +25,7 @@ let requiredModules = [ // services + layout views + system views
   'blockchain',
   'web3Provider',
   'scriptRunner',
+  'scriptRunnerBridge',
   'fetchAndCompile',
   'mainPanel',
   'hiddenPanel',
@@ -30,11 +33,12 @@ let requiredModules = [ // services + layout views + system views
   'menuicons',
   'filePanel',
   'terminal',
+  'statusBar',
   'settings',
   'pluginManager',
   'tabs',
   'udapp',
-  'dGitProvider',
+  'dgitApi',
   'solidity',
   'solidity-logic',
   'gistHandler',
@@ -51,17 +55,11 @@ let requiredModules = [ // services + layout views + system views
   'ganache-provider',
   'foundry-provider',
   'basic-http-provider',
-  'injected',
-  'injected-trustwallet',
-  'injected-optimism-provider',
-  'injected-arbitrum-one-provider',
-  'injected-ephemery-testnet-provider',
-  'injected-skale-chaos-testnet-provider',
   'vm-custom-fork',
   'vm-goerli-fork',
   'vm-mainnet-fork',
   'vm-sepolia-fork',
-  'vm-merge',
+  'vm-paris',
   'vm-london',
   'vm-berlin',
   'vm-shanghai',
@@ -76,28 +74,51 @@ let requiredModules = [ // services + layout views + system views
   'vyperCompilationDetails',
   'contractflattener',
   'solidity-script',
-  'openaigpt',
   'home',
   'doc-viewer',
-  'doc-gen',
-  'copilot-suggestion',
-  'remix-templates'
+  // 'doc-gen',
+  'remix-templates',
+  'remixAID',
+  'solhint',
+  'dgit',
+  'pinnedPanel',
+  'pluginStateLogger',
+  'environmentExplorer',
+  'templateSelection',
+  'matomo',
+  'walletconnect',
+  'popupPanel',
+  'remixAI',
+  'remixAID'
 ]
-
-
 
 // dependentModules shouldn't be manually activated (e.g hardhat is activated by remixd)
 const dependentModules = ['foundry', 'hardhat', 'truffle', 'slither']
 
-const loadLocalPlugins = ['doc-gen', 'doc-viewer', 'etherscan', 'vyper', 'solhint', 'walletconnect', 'circuit-compiler']
+const loadLocalPlugins = ['doc-gen', 'doc-viewer', 'contract-verification', 'vyper', 'solhint', 'walletconnect', 'circuit-compiler', 'learneth', 'quick-dapp']
+
+const partnerPlugins = ['cookbookdev']
 
 const sensitiveCalls = {
   fileManager: ['writeFile', 'copyFile', 'rename', 'copyDir'],
   contentImport: ['resolveAndSave'],
-  web3Provider: ['sendAsync']
+  web3Provider: ['sendAsync'],
+}
+
+const isInjectedProvider = (name) => {
+  return name.startsWith('injected')
+}
+
+const isVM = (name) => {
+  return name.startsWith('vm')
+}
+
+const isScriptRunner = (name) => {
+  return name.startsWith('scriptRunner')
 }
 
 export function isNative(name) {
+
   // nativePlugin allows to bypass the permission request
   const nativePlugins = [
     'vyper',
@@ -108,31 +129,35 @@ export function isNative(name) {
     'solidity',
     'solidity-logic',
     'solidityStaticAnalysis',
+    'solhint',
     'solidityUnitTesting',
     'layout',
+    'statusBar',
     'notification',
     'hardhat-provider',
     'ganache-provider',
     'foundry-provider',
     'basic-http-provider',
-    'injected-optimism-provider',
     'tabs',
-    'injected-arbitrum-one-provider',
-    'injected-skale-chaos-testnet-provider',
-    'injected-ephemery-testnet-provider',
-    'injected',
     'doc-gen',
     'doc-viewer',
     'circuit-compiler',
     'compilationDetails',
-    'vyperCompilationDetails'
+    'vyperCompilationDetails',
+    'remixGuide',
+    'environmentExplorer',
+    'templateSelection',
+    'walletconnect',
+    'contract-verification',
+    'popupPanel',
+    'LearnEth',
   ]
-  return nativePlugins.includes(name) || requiredModules.includes(name)
+  return nativePlugins.includes(name) || requiredModules.includes(name) || isInjectedProvider(name) || isVM(name) || isScriptRunner(name)
 }
 
 /**
  * Checks if plugin caller 'from' is allowed to activate plugin 'to'
- * The caller can have 'canActivate' as a optional property in the plugin profile.
+ * The caller can have 'canActivate' as an optional property in the plugin profile.
  * This is an array containing the 'name' property of the plugin it wants to call.
  * canActivate = ['plugin1-to-call','plugin2-to-call',....]
  * or the plugin is allowed by default because it is native
@@ -151,9 +176,8 @@ export class RemixAppManager extends PluginManager {
     this.pluginsDirectory = 'https://raw.githubusercontent.com/ethereum/remix-plugins-directory/master/build/metadata.json'
     this.pluginLoader = new PluginLoader()
     if (Registry.getInstance().get('platform').api.isDesktop()) {
-      requiredModules = [...requiredModules, 'fs', 'electronTemplates', 'isogit', 'remix-templates', 'electronconfig', 'xterm', 'compilerloader', 'ripgrep']
+      requiredModules = [...requiredModules, 'fs', 'electronTemplates', 'isogit', 'remix-templates', 'electronconfig', 'xterm', 'compilerloader', 'ripgrep', 'slither', 'remixAID', 'circom']
     }
-    
   }
 
   async canActivatePlugin(from, to) {
@@ -161,7 +185,7 @@ export class RemixAppManager extends PluginManager {
   }
 
   async canDeactivatePlugin(from, to) {
-    if (requiredModules.includes(to.name)) return false
+    if (this.isRequired(to.name)) return false
     return isNative(from.name)
   }
 
@@ -181,6 +205,8 @@ export class RemixAppManager extends PluginManager {
         }
       }
       await this.toggleActive(name)
+    }else{
+      console.log('cannot deactivate', name)
     }
   }
 
@@ -195,6 +221,11 @@ export class RemixAppManager extends PluginManager {
       return true
     }
 
+    // skipping partner plugins' requests
+    if (partnerPlugins[from]) {
+      return true
+    }
+
     // ask the user for permission
     return await this.call('permissionhandler', 'askPermission', this.profiles[from], this.profiles[to], method, message, isSensitiveCall)
   }
@@ -206,7 +237,7 @@ export class RemixAppManager extends PluginManager {
     )
     this.event.emit('activate', plugin)
     this.emit('activate', plugin)
-    if (!requiredModules.includes(plugin.name)) _paq.push(['trackEvent', 'pluginManager', 'activate', plugin.name])
+    if (!this.isRequired(plugin.name)) _paq.push(['trackEvent', 'pluginManager', 'activate', plugin.name])
   }
 
   getAll() {
@@ -234,7 +265,7 @@ export class RemixAppManager extends PluginManager {
 
   isRequired(name) {
     // excluding internal use plugins
-    return requiredModules.includes(name)
+    return requiredModules.includes(name) || isInjectedProvider(name) || isVM(name) || isScriptRunner(name)
   }
 
   async registeredPlugins() {
@@ -243,6 +274,7 @@ export class RemixAppManager extends PluginManager {
       const res = await fetch(this.pluginsDirectory)
       plugins = await res.json()
       plugins = plugins.filter((plugin) => {
+        if (plugin.name === 'dgit') return false
         if (plugin.targets && Array.isArray(plugin.targets) && plugin.targets.length > 0) {
           return plugin.targets.includes('remix')
         }
@@ -280,8 +312,9 @@ export class RemixAppManager extends PluginManager {
     }
 
     return plugins.map(plugin => {
-      if (plugin.name === 'dgit' && Registry.getInstance().get('platform').api.isDesktop()) { plugin.url = 'https://dgit4-76cc9.web.app/' } // temporary fix
+      if (plugin.name === 'dgit' && Registry.getInstance().get('platform').api.isDesktop()) { plugin.url = 'https://dgit4-76cc9.web.app/' }
       if (plugin.name === testPluginName) plugin.url = testPluginUrl
+      //console.log('plugin', plugin)
       return new IframePlugin(plugin)
     })
   }
@@ -296,7 +329,7 @@ export class RemixAppManager extends PluginManager {
       path: [],
       pattern: [],
       sticky: true,
-      group: 5
+      group: 5,
     })
     await this.call('filePanel', 'registerContextMenuItem', {
       id: 'nahmii-compiler',
@@ -307,7 +340,7 @@ export class RemixAppManager extends PluginManager {
       path: [],
       pattern: [],
       sticky: true,
-      group: 6
+      group: 6,
     })
     await this.call('filePanel', 'registerContextMenuItem', {
       id: 'solidityumlgen',
@@ -318,7 +351,7 @@ export class RemixAppManager extends PluginManager {
       path: [],
       pattern: [],
       sticky: true,
-      group: 7
+      group: 7,
     })
     await this.call('filePanel', 'registerContextMenuItem', {
       id: 'doc-gen',
@@ -329,7 +362,18 @@ export class RemixAppManager extends PluginManager {
       path: [],
       pattern: [],
       sticky: true,
-      group: 7
+      group: 7,
+    })
+    await this.call('filePanel', 'registerContextMenuItem', {
+      id: 'vyper',
+      name: 'vyperCompileCustomAction',
+      label: 'Compile for Vyper',
+      type: [],
+      extension: ['.vy'],
+      path: [],
+      pattern: [],
+      sticky: true,
+      group: 7,
     })
     if (Registry.getInstance().get('platform').api.isDesktop()) {
       await this.call('filePanel', 'registerContextMenuItem', {
@@ -341,7 +385,7 @@ export class RemixAppManager extends PluginManager {
         path: [],
         pattern: [],
         sticky: true,
-        group: 8
+        group: 8,
       })
       await this.call('filePanel', 'registerContextMenuItem', {
         id: 'fs',
@@ -352,7 +396,7 @@ export class RemixAppManager extends PluginManager {
         path: [],
         pattern: [],
         sticky: true,
-        group: 8
+        group: 8,
       })
     }
   }
@@ -369,7 +413,19 @@ class PluginLoader {
 
   constructor() {
     const queryParams = new QueryParams()
-    this.donotAutoReload = ['remixd'] // that would be a bad practice to force loading some plugins at page load.
+    // some plugins should not be activated at page load.
+    this.donotAutoReload = [
+      'remixd',
+      'environmentExplorer',
+      'templateSelection',
+      'compilationDetails',
+      'vyperCompilationDetails',
+      'walletconnect',
+      'dapp-draft',
+      'solidityumlgen',
+      'remixGuide',
+      'doc-viewer'
+    ]
     this.loaders = {}
     this.loaders.localStorage = {
       set: (plugin, actives) => {
@@ -378,7 +434,7 @@ class PluginLoader {
       },
       get: () => {
         return JSON.parse(localStorage.getItem('workspace'))
-      }
+      },
     }
 
     this.loaders.queryParams = {
@@ -389,7 +445,7 @@ class PluginLoader {
         const {activate} = queryParams.get()
         if (!activate) return []
         return activate.split(',')
-      }
+      },
     }
 
     this.current = queryParams.get().activate ? 'queryParams' : 'localStorage'

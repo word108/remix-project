@@ -72,7 +72,7 @@ export interface CompilerInput {
     // Addresses of the libraries. If not all libraries are given here,
     // it can result in unlinked objects whose output data is different.
     libraries?: {
-      // The top level key is the the name of the source file where the library is used.
+      // The top level key is the name of the source file where the library is used.
       // If remappings are used, this source file should match the global path
       // after remappings were applied.
       // If this key is an empty string, that refers to a global level.
@@ -161,7 +161,7 @@ export enum CompilerRetriggerMode {
 }
 
 export interface CompilerState {
-    compileJSON: ((input: SourceWithTarget, timeStamp?:  number) => void) | null,
+    compileJSON: ((input: SourceWithTarget, timeStamp?: number) => void) | null,
     worker: any,
     currentVersion: string| null| undefined,
     compilerLicense: string| null

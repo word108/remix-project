@@ -1,36 +1,16 @@
-import { ABIDescription} from '@remixproject/plugin-api'
+import { ABIDescription } from '@remixproject/plugin-api'
 import axios from 'axios'
+import { remixClient } from './remix-client'
+import _ from 'lodash'
+import { VyperCompilationError , VyperCompilationOutput, VyperCompilationResult } from './types'
 
 export interface Contract {
   name: string
   content: string
 }
 
-export interface VyperCompilationResult {
-  status: 'success'
-  bytecode: string
-  contractName?: string
-  bytecode_runtime: string
-  abi: ABIDescription[]
-  ir: string
-  method_identifiers: {
-    [method: string]: string
-  }
-}
-
-export interface VyperCompilationError {
-  status: 'failed'
-  column?: number
-  line?: number
-  message: string
-}
-
-export type VyperCompilationOutput = VyperCompilationResult | VyperCompilationError
-
 /** Check if the output is an error */
-export function isCompilationError(output: VyperCompilationOutput): output is VyperCompilationError {
-  return output.status === 'failed'
-}
+export const isCompilationError = (output: VyperCompilationOutput): output is VyperCompilationError => output.status === 'failed'
 
 export function normalizeContractPath(contractPath: string): string[] {
   const paths = contractPath.split('/')
@@ -45,24 +25,40 @@ export function normalizeContractPath(contractPath: string): string[] {
   return [folders,resultingPath, filename]
 }
 
-function parseErrorString(errorString) {
-  // Split the string into lines
-  let lines = errorString.trim().split('\n')
-  // Extract the line number and message
-  let message = lines[1].trim()
-  let targetLine = lines[2].split(',')
-  let lineColumn = targetLine[targetLine.length - 1].split(' ')[2].split(':')
-  const errorObject = {
-    status: 'failed',
-    message: message,
-    column: parseInt(lineColumn[1]),
-    line: parseInt(lineColumn[0])
+const compileReturnType = (output, contract): VyperCompilationResult => {
+  const t: any = toStandardOutput(contract, output)
+  const temp = _.merge(t['contracts'][contract])
+  const normal = normalizeContractPath(contract)[2]
+  const abi = temp[normal]['abi']
+  const evm = _.merge(temp[normal]['evm'])
+  const methodIdentifiers = evm.methodIdentifiers
+  // TODO: verify this is correct
+  const version = output.version || '0.4.0'
+  const optimized = output.optimize || true
+  const evmVersion = ''
+
+  const result: {
+    contractName: any,
+    abi: any,
+    bytecode: any,
+    runtimeBytecode: any,
+    ir: '',
+    methodIdentifiers: any,
+    version?: '',
+    evmVersion?: ''
+    optimized?: boolean
+  } = {
+    contractName: normal,
+    abi,
+    bytecode: evm.bytecode,
+    runtimeBytecode: evm.deployedBytecode,
+    ir: '',
+    methodIdentifiers,
+    version,
+    evmVersion,
+    optimized
   }
-  message = null
-  targetLine = null
-  lineColumn = null
-  lines = null
-  return errorObject
+  return result
 }
 
 /**
@@ -70,7 +66,7 @@ function parseErrorString(errorString) {
  * @param url The url of the compiler
  * @param contract The name and content of the contract
  */
-export async function compile(url: string, contract: Contract): Promise<any> {
+export async function compile(url: string, contract: Contract): Promise<VyperCompilationOutput> {
   if (!contract.name) {
     throw new Error('Set your Vyper contract file.')
   }
@@ -83,9 +79,10 @@ export async function compile(url: string, contract: Contract): Promise<any> {
   const compilePackage = {
     manifest: 'ethpm/3',
     sources: {
-      [contractName] : {content : contract.content}
+      [contractName] : { content : contract.content }
     }
   }
+
   let response = await axios.post(`${url}compile`, compilePackage )
 
   if (response.status === 404) {
@@ -113,8 +110,7 @@ export async function compile(url: string, contract: Contract): Promise<any> {
     const intermediate = await(await axios.get(url + 'exceptions/' + compileCode , {
       method: 'Get'
     })).data
-    result = parseErrorString(intermediate[0])
-    return result
+    return intermediate
   }
   await new Promise((resolve) => setTimeout(() => resolve({}), 3000))
 }
@@ -167,6 +163,80 @@ export function toStandardOutput(fileName: string, compilationResult: any): any 
     }
   }
 }
+
+export async function compileContract(contract: string, compilerUrl: string, setOutput?: any, setLoadingSpinnerState?: React.Dispatch<React.SetStateAction<boolean>>, spinner?: boolean) {
+  remixClient.eventEmitter.emit('resetCompilerState', {})
+  spinner && spinner === true ? setLoadingSpinnerState && setLoadingSpinnerState(true) : null
+
+  try {
+    // await remixClient.discardHighlight()
+    let _contract: any
+    try {
+      _contract = await remixClient.getContract()
+    } catch (e: any) {
+      const errorGettingContract: VyperCompilationError = {
+        status: 'failed',
+        message: e.message,
+        error_type: 'fetch_contract'
+      }
+
+      remixClient.eventEmitter.emit('setOutput', { status: 'failed', errors: [errorGettingContract] } )
+      return
+    }
+    remixClient.changeStatus({
+      key: 'loading',
+      type: 'info',
+      title: 'Compiling'
+    })
+    // try {
+    let output = await compile(compilerUrl, _contract)
+    if (output && output[0] && output[0].status === 'failed') {
+      remixClient.changeStatus({
+        key: 'failed',
+        type: 'error',
+        title: 'Compilation failed...'
+      })
+
+      setLoadingSpinnerState && setLoadingSpinnerState(false)
+      remixClient.eventEmitter.emit('setOutput', { status: 'failed', errors: output })
+      return
+    }
+
+    // SUCCESS
+    remixClient.changeStatus({
+      key: 'succeed',
+      type: 'success',
+      title: 'success'
+    })
+
+    setLoadingSpinnerState && setLoadingSpinnerState(false)
+    const data = toStandardOutput(_contract.name, output)
+    remixClient.compilationFinish(_contract.name, _contract.content, data)
+    const contractName = _contract['name']
+    const compileResult = compileReturnType(output, contractName)
+    if (setOutput === null || setOutput === undefined) {
+      remixClient.eventEmitter.emit('setOutput', { status: 'success', contractName, compileResult })
+    } else {
+      remixClient.eventEmitter.emit('setOutput', { status: 'success', contractName, compileResult })
+    }
+  } catch (err: any) {
+    remixClient.changeStatus({
+      key: 'failed',
+      type: 'error',
+      title: `1 error occurred ${err.message}`
+    })
+
+    const errorGettingContract: VyperCompilationError = {
+      status: 'failed',
+      message: err.message,
+      error_type: 'unknown_error'
+    }
+
+    setLoadingSpinnerState && setLoadingSpinnerState(false)
+    remixClient.eventEmitter.emit('setOutput', { status: 'failed', errors: [errorGettingContract] })
+  }
+}
+
 export type StandardOutput = {
   sources: {
     [fileName: string]: {

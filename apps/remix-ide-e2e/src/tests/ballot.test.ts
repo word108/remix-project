@@ -75,7 +75,7 @@ module.exports = {
         abortOnFailure: false,
         suppressNotFoundErrors: true,
       })
-      // we are not changing the visibility for not checksumed contracts
+      // we are not changing the visibility for not checksummed contracts
       // .addAtAddressInstance('0x692a70D2e424a56D2C6C27aA97D1a86395877b3B', true, false)
       .clickLaunchIcon('filePanel')
       .addAtAddressInstance('0x692a70D2e424a56D2C6C27aA97D1a86395877b3A', true, true)
@@ -97,12 +97,14 @@ module.exports = {
       .clickLaunchIcon('filePanel')
       .click('*[data-id="workspacesMenuDropdown"]')
       .click('*[data-id="workspacecreate"]')
+      .waitForElementPresent('*[data-id="create-remixDefault"]')
+      .scrollAndClick('*[data-id="create-remixDefault"]')
       .waitForElementVisible('*[data-id="modalDialogCustomPromptTextCreate"]')
-      .waitForElementVisible('[data-id="fileSystemModalDialogModalFooter-react"] > button')
+      .scrollAndClick('*[data-id="modalDialogCustomPromptTextCreate"]')
+      .setValue('*[data-id="modalDialogCustomPromptTextCreate"]', 'workspace_remix_default')
       // eslint-disable-next-line dot-notation
       .execute(function () { document.querySelector('*[data-id="modalDialogCustomPromptTextCreate"]')['value'] = 'workspace_remix_default' })
-      .waitForElementPresent('[data-id="fileSystemModalDialogModalFooter-react"] .modal-ok')
-      .execute(function () { (document.querySelector('[data-id="fileSystemModalDialogModalFooter-react"] .modal-ok') as HTMLElement).click() })
+      .modalFooterOKClick('TemplatesSelection')
       .pause(1000)
       .waitForElementVisible('*[data-id="treeViewLitreeViewItemcontracts"]')
       .addFile('contracts/lib/storage/src/Storage.sol', { content: storageContract})
@@ -118,7 +120,6 @@ module.exports = {
       .connectToExternalHttpProvider('http://localhost:8545', 'Custom')
       .clickLaunchIcon('solidity')
       .clickLaunchIcon('udapp')
-      .pause(2000)
       .clearValue('input[placeholder="bytes32[] proposalNames"]')
       .setValue('input[placeholder="bytes32[] proposalNames"]', '["0x48656c6c6f20576f726c64210000000000000000000000000000000000000000"]')
       .click('*[data-id="Deploy - transact (not payable)"]')
@@ -252,9 +253,9 @@ module.exports = {
       .clickLaunchIcon('solidity')
       .waitForElementVisible('*[data-id="scConfigExpander"]')
       .click('*[data-id="scManualConfiguration"]')
-      .waitForElementVisible('select[id="compilierLanguageSelector"]', 10000)
-      .click('select[id="compilierLanguageSelector"]')
-      .click('select[id="compilierLanguageSelector"] option[value=Yul]')
+      .waitForElementVisible('select[id="compilerLanguageSelector"]', 10000)
+      .click('select[id="compilerLanguageSelector"]')
+      .click('select[id="compilerLanguageSelector"] option[value=Yul]')
       .waitForElementContainsText('[data-id="compiledContracts"]', 'Contract', 65000)
       .clickLaunchIcon('udapp')
       .click('*[data-id="Deploy - transact (not payable)"]')

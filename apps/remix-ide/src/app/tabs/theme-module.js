@@ -118,7 +118,7 @@ export class ThemeModule extends Plugin {
     }
     const next = themeName || this.active // Name
     if (next === this.active) return // --> exit out of this method
-    _paq.push(['trackEvent', 'themeModule', 'switchTo', next])
+    _paq.push(['trackEvent', 'themeModule', 'switchThemeTo', next])
     const nextTheme = this.themes[next] // Theme
     if (!this.forced) this._deps.config.set('settings/theme', next)
     document.getElementById('theme-link') ? document.getElementById('theme-link').remove() : null
@@ -146,7 +146,7 @@ export class ThemeModule extends Plugin {
   }
 
   /**
-   * fixes the invertion for images since this should be adjusted when we switch between dark/light qualified themes
+   * fixes the inversion for images since this should be adjusted when we switch between dark/light qualified themes
    * @param {element} [image] - the dom element which invert should be fixed to increase visibility
    */
   fixInvert(image) {

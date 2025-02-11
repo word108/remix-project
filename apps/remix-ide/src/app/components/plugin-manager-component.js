@@ -19,7 +19,7 @@ const profile = {
   maintainedBy: "Remix"
 }
 
-class PluginManagerComponent extends ViewPlugin {
+export default class PluginManagerComponent extends ViewPlugin {
   constructor (appManager, engine) {
     super(profile)
     this.appManager = appManager
@@ -105,8 +105,7 @@ class PluginManagerComponent extends ViewPlugin {
 
   getAndFilterPlugins = (filter) => {
     this.filter = typeof filter === 'string' ? filter.toLowerCase() : this.filter
-
-    const isFiltered = (profile) => (profile.displayName ? profile.displayName : profile.name).toLowerCase().includes(this.filter)
+    const isFiltered = (profile) => (profile.displayName + profile.name + profile.description).toLowerCase().includes(this.filter)
     const isNotRequired = (profile) => !this.appManager.isRequired(profile.name)
     const isNotDependent = (profile) => !this.appManager.isDependent(profile.name)
     const isNotHome = (profile) => profile.name !== 'home'

@@ -1,4 +1,4 @@
-// TODO: this file shoudl be removed at some point
+// TODO: this file should be removed at some point
 const CmdLine = require('./src/cmdline/index')
 // var compilation = require('./compilation.json')
 
@@ -37,7 +37,7 @@ const compilationData = JSON.parse(solc.compileStandardWrapper(JSON.stringify(in
 console.dir(Object.keys(compilationData))
 const compilation = {}
 compilation['data'] = compilationData
-compilation['source'] = {sources: inputJson.sources}
+compilation['source'] = { sources: inputJson.sources }
 console.dir(compilation)
 console.dir(compilation['data'].errors)
 

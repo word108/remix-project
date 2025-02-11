@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react' // eslint-disable-line
-import {ViewPlugin} from '@remixproject/engine-web'
+import { ViewPlugin } from '@remixproject/engine-web'
 import * as packageJson from '../../../../../package.json'
 import {RemixUiSettings} from '@remix-ui/settings' //eslint-disable-line
-import {Registry} from '@remix-project/remix-lib'
-import {PluginViewWrapper} from '@remix-ui/helper'
+import { Registry } from '@remix-project/remix-lib'
+import { PluginViewWrapper } from '@remix-ui/helper'
 declare global {
   interface Window {
     _paq: any
@@ -15,7 +15,7 @@ const _paq = (window._paq = window._paq || [])
 const profile = {
   name: 'settings',
   displayName: 'Settings',
-  methods: ['get'],
+  methods: ['get', 'updateCopilotChoice', 'getCopilotSetting'],
   events: [],
   icon: 'assets/img/settings.webp',
   description: 'Remix-IDE settings',
@@ -27,7 +27,7 @@ const profile = {
   maintainedBy: 'Remix'
 }
 
-module.exports = class SettingsTab extends ViewPlugin {
+export default class SettingsTab extends ViewPlugin {
   config: any = {}
   editor: any
   private _deps: {
@@ -36,6 +36,7 @@ module.exports = class SettingsTab extends ViewPlugin {
   }
   element: HTMLDivElement
   public useMatomoAnalytics: any
+  public useCopilot: any
   dispatch: React.Dispatch<any> = () => {}
   constructor(config, editor) {
     super(profile)
@@ -51,11 +52,15 @@ module.exports = class SettingsTab extends ViewPlugin {
     this.element = document.createElement('div')
     this.element.setAttribute('id', 'settingsTab')
     this.useMatomoAnalytics = null
+    this.useCopilot = this.get('settings/copilot/suggest/activate')
   }
 
   setDispatch(dispatch: React.Dispatch<any>) {
     this.dispatch = dispatch
     this.renderComponent()
+  }
+
+  onActivation(): void {
   }
 
   render() {
@@ -74,6 +79,7 @@ module.exports = class SettingsTab extends ViewPlugin {
         editor={state.editor}
         _deps={state._deps}
         useMatomoAnalytics={state.useMatomoAnalytics}
+        useCopilot={state.useCopilot}
         themeModule={state._deps.themeModule}
         localeModule={state._deps.localeModule}
       />
@@ -88,8 +94,23 @@ module.exports = class SettingsTab extends ViewPlugin {
     return this.config.get(key)
   }
 
+  updateCopilotChoice(isChecked) {
+    this.config.set('settings/copilot/suggest/activate', isChecked)
+    this.useCopilot = isChecked
+    this.emit('copilotChoiceUpdated', isChecked)
+    this.dispatch({
+      ...this
+    })
+  }
+
+  getCopilotSetting(){
+    return this.useCopilot
+  }
+
   updateMatomoAnalyticsChoice(isChecked) {
     this.config.set('settings/matomo-analytics', isChecked)
+    // set timestamp to local storage to track when the user has given consent
+    localStorage.setItem('matomo-analytics-consent', Date.now().toString())
     this.useMatomoAnalytics = isChecked
     if (!isChecked) {
       // revoke tracking consent

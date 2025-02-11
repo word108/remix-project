@@ -8,6 +8,8 @@ import zhJson from './locales/zh'
 import esJson from './locales/es'
 import frJson from './locales/fr'
 import itJson from './locales/it'
+import koJson from './locales/ko'
+import ruJson from './locales/ru'
 const _paq = window._paq = window._paq || []
 
 const locales = [
@@ -15,6 +17,8 @@ const locales = [
   { code: 'en', name: 'English', localeName: 'English', messages: enJson },
   { code: 'fr', name: 'French', localeName: 'Français', messages: frJson },
   { code: 'it', name: 'Italian', localeName: 'Italiano', messages: itJson },
+  { code: 'ko', name: 'Korean', localeName: '한국인', messages: koJson },
+  { code: 'ru', name: 'Russian', localeName: 'Русский', messages: ruJson },
   { code: 'es', name: 'Spanish', localeName: 'Español', messages: esJson }
 ]
 
@@ -34,7 +38,7 @@ export class LocaleModule extends Plugin {
       config: Registry.getInstance().get('config') && Registry.getInstance().get('config').api
     }
     this.locales = {}
-    locales.map((locale) => {
+    locales.forEach((locale) => {
       this.locales[locale.code.toLocaleLowerCase()] = locale
     })
     this._paq = _paq
@@ -73,6 +77,7 @@ export class LocaleModule extends Plugin {
     const next = localeCode || this.active // Name
     if (next === this.active) return // --> exit out of this method
     _paq.push(['trackEvent', 'localeModule', 'switchTo', next])
+    
     const nextLocale = this.locales[next] // Locale
     if (!this.forced) this._deps.config.set('settings/locale', next)
 

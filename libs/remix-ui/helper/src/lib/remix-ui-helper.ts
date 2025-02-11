@@ -1,4 +1,4 @@
-import * as ethJSUtil from '@ethereumjs/util'
+import { bytesToHex, toChecksumAddress } from '@ethereumjs/util'
 
 export const extractNameFromKey = (key: string): string => {
   if (!key) return
@@ -81,7 +81,8 @@ export const getPathIcon = (path: string) => {
                   ? 'small fa-kit fa-ts-logo' : path.endsWith('.tsc')
                     ? 'fad fa-brackets-curly' : path.endsWith('.cairo')
                       ? 'small fa-kit fa-cairo' : path.endsWith('.circom')
-                        ? 'fa-kit fa-circom' : 'far fa-file'
+                        ? 'fa-kit fa-circom' : path.endsWith('.nr')
+                          ? 'fa-duotone fa-regular fa-diamond' : 'far fa-file'
 }
 
 export const isNumeric = (value) => {
@@ -97,12 +98,12 @@ export const shortenAddress = (address, etherBalance?) => {
 export const addressToString = (address) => {
   if (!address) return null
   if (typeof address !== 'string') {
-    address = address.toString('hex')
+    address = bytesToHex(address)
   }
   if (address.indexOf('0x') === -1) {
     address = '0x' + address
   }
-  return ethJSUtil.toChecksumAddress(address)
+  return toChecksumAddress(address)
 }
 
 export const is0XPrefixed = (value) => {
@@ -113,7 +114,7 @@ export const isHexadecimal = (value) => {
   return /^[0-9a-fA-F]+$/.test(value) && (value.length % 2 === 0)
 }
 
-export const isValidHash  = (hash) =>  { // 0x prefixed, hexadecimal, 64digit
+export const isValidHash = (hash) => { // 0x prefixed, hexadecimal, 64digit
   const hexValue = hash.slice(2, hash.length)
   return is0XPrefixed(hash) && /^[0-9a-fA-F]{64}$/.test(hexValue)
 }
@@ -138,6 +139,6 @@ export const shortenProxyAddress = (address: string) => {
 
 export const shortenDate = (dateString: string) => {
   const date = new Date(dateString)
-  
+
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ', ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }

@@ -10,7 +10,8 @@
 * Copyright 2011-2020 Twitter, Inc.
 * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
 */@import url(https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap);:root {
-	--blue:#2c3e50;
+  --ai: #da2de4;
+  --blue:#2c3e50;
 	--indigo:#6610f2;
 	--purple:#6f42c1;
 	--pink:#e83e8c;
@@ -35,6 +36,7 @@
 	--body-bg: #fff;
 	--text-bg-mark: #fcf8e3;
 	--custom-select: #fff;
+  --brand-dark-blue: #222496;
 	--breakpoint-xs:0;
 	--breakpoint-sm:576px;
 	--breakpoint-md:768px;
@@ -64,6 +66,19 @@ body {
 	text-align:left;
 	background-color:#fff
 }
+
+*::-webkit-scrollbar {
+  width:  8px;
+  height: 6px;
+  background-color: var(--body-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--secondary);
+  opacity: 0.3;
+  border-radius: 30px;
+}
+
 [tabindex="-1"]:focus:not(:focus-visible) {
 	outline:0!important
 }
@@ -2878,7 +2893,7 @@ input[type=button].btn-block,input[type=reset].btn-block,input[type=submit].btn-
 	background-color:#ecf0f1
 }
 .custom-control-label {
-	position:relative;	margin-bottom:0;	vertical-align:top
+	position:relative;	margin-bottom:0;	vertical-align:top; padding-top: 0.15rem;
 }
 .custom-control-label::before {
 	position:absolute;	top:0px;	left:-1.5rem;	display:block;	width:1rem;	height:1rem;	pointer-events:none;	content:"";	background-color:#fff;	border:#b4bcc2 solid 1px
@@ -4139,7 +4154,7 @@ a.close.disabled {
 	display:-ms-flexbox;	display:flex;	-ms-flex-align:start;	align-items:flex-start;	-ms-flex-pack:justify;	justify-content:space-between;	padding:1rem 1rem;	border-bottom:1px solid #dee2e6;	border-top-left-radius:calc(.3rem - 1px);	border-top-right-radius:calc(.3rem - 1px)
 }
 .modal-header .close {
-	padding:1rem 1rem;	margin:-1rem -1rem -1rem auto
+	padding:1rem 1rem;	margin:-1rem -1rem -1rem auto; cursor: pointer;
 }
 .modal-title {
 	margin-bottom:0;	line-height:1.5
@@ -7003,6 +7018,9 @@ a.text-danger:focus,a.text-danger:hover {
 }
 a.text-light:focus,a.text-light:hover {
 	color:#c0cdd1!important
+}
+.text-ai {
+  color: #da2de4 !important;
 }
 .text-dark {
 	color:#7b8a8b!important

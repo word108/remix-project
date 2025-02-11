@@ -1,13 +1,13 @@
 import React from 'react' // eslint-disable-line
-import {FormattedMessage, useIntl} from 'react-intl'
-import {shortenHexData} from '@remix-ui/helper'
+import { FormattedMessage, useIntl } from 'react-intl'
+import { shortenHexData } from '@remix-ui/helper'
 import CheckTxStatus from './ChechTxStatus' // eslint-disable-line
 import showTable from './Table'
-import {execution} from '@remix-project/remix-lib'
+import { execution } from '@remix-project/remix-lib'
 
 const typeConversion = execution.typeConversion
 
-const RenderCall = ({tx, resolvedData, logs, index, plugin, showTableHash, txDetails, modal}) => {
+const RenderCall = ({ tx, resolvedData, logs, index, plugin, showTableHash, txDetails, modal }) => {
   const intl = useIntl()
   const to = resolvedData.contractName + '.' + resolvedData.fn
   const from = tx.from ? tx.from : ' - '
@@ -18,12 +18,12 @@ const RenderCall = ({tx, resolvedData, logs, index, plugin, showTableHash, txDet
     event.stopPropagation()
     if (tx.isCall && !tx.envMode.startsWith('vm')) {
       modal(
-        intl.formatMessage({id: 'terminal.vmMode'}),
-        intl.formatMessage({id: 'terminal.vmModeMsg'}),
-        intl.formatMessage({id: 'terminal.ok'}),
+        intl.formatMessage({ id: 'terminal.vmMode' }),
+        intl.formatMessage({ id: 'terminal.vmModeMsg' }),
+        intl.formatMessage({ id: 'terminal.ok' }),
         false,
         () => {},
-        intl.formatMessage({id: 'terminal.cancel'}),
+        intl.formatMessage({ id: 'terminal.cancel' }),
         () => {}
       )
     } else {
@@ -66,6 +66,7 @@ const RenderCall = ({tx, resolvedData, logs, index, plugin, showTableHash, txDet
             'gas': tx.gas,
             'input': tx.input,
             'decoded input': resolvedData && resolvedData.params ? JSON.stringify(typeConversion.stringify(resolvedData.params), null, '\t') : ' - ',
+            'output': tx.returnValue,
             'decoded output': resolvedData && resolvedData.decodedReturnValue ? JSON.stringify(typeConversion.stringify(resolvedData.decodedReturnValue), null, '\t') : ' - ',
             'val': tx.value,
             'logs': logs,
